@@ -16,6 +16,8 @@ The scheduled rules only pick up what the NRT rules missed.
 3. Certificates & secrets > New client secret. Copy the Value right away, it is shown once. Note the expiry date: when it expires, alarms stop until you enter a new secret in SOCRadar.
 4. Microsoft Entra ID > Enterprise applications > the same app. Copy its Object ID. This is not the Application ID.
 
+The app needs no API permissions and no admin consent. Its only right is the Monitoring Metrics Publisher role on the data collection rule, which the template gives it when you pass the Object ID.
+
 ## 2. Deploy
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Forcunsami%2FSOCRadar-Sentinel-Push%2Fmaster%2Fazuredeploy.json)
