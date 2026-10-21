@@ -65,7 +65,7 @@ Above 30, the NRT rule also opens one summary incident that carries the title of
 - The template adds 10 NRT rules. Microsoft: "No more than 50 rules can be defined per customer."
 - A resent alarm is added as a second alert to its open incident when the same rule raised both alerts within 7 days. A closed incident is not reopened; a new one opens.
 - The NRT rule sometimes raises two alerts for one alarm. Both land in the same incident.
-- Per alarm type the NRT rule takes about 30 alarms a minute; the backstop rule takes 149 every 10 minutes and only sees rows 12 to 60 minutes old. A burst of more than about 600 alarms of one type, or more than about 15 a minute beyond the NRT's 30 kept up for an hour, can leave alarms without an incident.
+- Per alarm type the NRT rule takes about 30 alarms a minute; the backstop rule takes 149 every 10 minutes and only sees rows 12 to 60 minutes old. Measured: 1,100 alarms of one type in one burst gave 625 incidents (29 NRT, then 4 backstop runs of 149, the last one hour after the send) and left 475 alarms without one. So about 625 alarms of one type per burst get an incident. More than about 15 a minute beyond the NRT's 30, kept up for an hour, can also leave alarms without one (derived, not measured).
 - Rules skip rows with `EventType` `connection.test`, so SOCRadar's Test connection opens no incident.
 - `TimeGenerated` is the time the row reached Azure, so a late alarm is still seen by the rules. The alarm's own time is in `AlarmDate`.
 - Only alarms created after setup arrive. Older alarms are not sent.
