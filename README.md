@@ -14,7 +14,11 @@ The scheduled rules only pick up what the NRT rules missed.
 1. Azure portal > Microsoft Entra ID > App registrations > New registration. Any name, no redirect URI, Register.
 2. On the Overview page copy the Application (client) ID and the Directory (tenant) ID.
 3. Certificates & secrets > New client secret. Copy the Value right away, it is shown once. Note the expiry date: when it expires, alarms stop until you enter a new secret in SOCRadar.
-4. Microsoft Entra ID > Enterprise applications > the same app. Copy its Object ID. This is not the Application ID.
+4. Get the Object ID of the app's service principal. This is the value for `ServicePrincipalObjectId` in step 2. It is not the Application (client) ID and not the Object ID shown on the App registrations page.
+   1. Still on the app's Overview page under App registrations, find **Managed application in local directory** and click the app name next to it.
+   2. The Enterprise application page opens. On its Overview (or Properties) page copy **Object ID**.
+
+   Or with Azure CLI: `az ad sp show --id <Application (client) ID> --query id -o tsv`
 
 The app needs no API permissions and no admin consent. Its only right is the Monitoring Metrics Publisher role on the data collection rule, which the template gives it when you pass the Object ID.
 
@@ -31,6 +35,8 @@ When you set `ServicePrincipalObjectId`, you need Owner or User Access Administr
 | `WorkspaceLocation` | Region of the workspace. Defaults to the resource group region |
 | `ServicePrincipalObjectId` | The Object ID from step 1.4. Empty: no role is assigned, and you give the app the Monitoring Metrics Publisher role on the data collection rule yourself |
 | `TableRetentionDays` | Retention of `SOCRadar_Alarms_CL`. Default 90 |
+
+To update an existing setup to the latest template, deploy again into the same resource group with the same values.
 
 ## 3. Copy the outputs
 
@@ -65,7 +71,7 @@ Above 30, the NRT rule also opens one summary incident that carries the title of
 - The template adds 10 NRT rules. Microsoft: "No more than 50 rules can be defined per customer."
 - A resent alarm is added as a second alert to its open incident when the same rule raised both alerts within 7 days. A closed incident is not reopened; a new one opens.
 - The NRT rule sometimes raises two alerts for one alarm. Both land in the same incident.
-- Per alarm type the NRT rule takes about 30 alarms a minute; the backstop rule takes 149 every 10 minutes and only sees rows 12 to 60 minutes old. Measured: 1,100 alarms of one type in one burst gave 625 incidents (29 NRT, then 4 backstop runs of 149, the last one hour after the send) and left 475 alarms without one. So about 625 alarms of one type per burst get an incident. More than about 15 a minute beyond the NRT's 30, kept up for an hour, can also leave alarms without one (derived, not measured).
+- Per alarm type the NRT rule takes about 30 alarms a minute. The backstop rule takes 149 every 10 minutes and sees rows from 12 minutes to 1 day old, so a big burst of one type still gets incidents, only later: about 900 an hour. An alarm that stays without an incident for a whole day (for example, the rules were switched off) does not get one later.
 - Rules skip rows with `EventType` `connection.test`, so SOCRadar's Test connection opens no incident.
 - `TimeGenerated` is the time the row reached Azure, so a late alarm is still seen by the rules. The alarm's own time is in `AlarmDate`.
 - Only alarms created after setup arrive. Older alarms are not sent.
