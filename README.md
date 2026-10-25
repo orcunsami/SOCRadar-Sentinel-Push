@@ -86,6 +86,9 @@ Above 30, the NRT rule also opens one summary incident that carries the title of
 - Rules skip rows with `EventType` `connection.test`, so SOCRadar's Test connection opens no incident.
 - `TimeGenerated` is the time the row reached Azure, so a late alarm is still seen by the rules. The alarm's own time is in `AlarmDate`.
 - Only alarms created after setup arrive. Older alarms are not sent.
+- The incident description lists the alarm ID, types, severity, status, date and text, then the alarm content as a
+  Field | Value table and a link to the alarm in SOCRadar. The Azure portal shows the table; the Defender portal
+  shows the same text without formatting.
 - Incidents are not written back to SOCRadar. Closing an incident does not change the alarm.
 - Use one route per workspace: this push template or the pull template, not both.
 
