@@ -87,7 +87,7 @@ Or with Azure CLI: `az ad sp show --id <Application (client) ID> --query id -o t
 
 Check the subscription. Region can stay as is.
 
-17. Resource group: **Create new**, or pick an existing one.
+17. Resource group: the one that already holds your Microsoft Sentinel workspace. **Create new** only works together with `Deploy New Workspace = true` in step 18.
 18. **Workspace Name**. The default `Deploy New Workspace = false` uses an existing Microsoft Sentinel workspace in
     the resource group you chose; a name that does not exist fails before anything is created. Set it to `true` to
     create the workspace and enable Microsoft Sentinel.

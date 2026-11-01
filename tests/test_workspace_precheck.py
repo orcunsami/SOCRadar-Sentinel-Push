@@ -94,10 +94,15 @@ if any(r.get("name") == GUARD for r in resources):
     check("onboardingStates" in json.dumps(outs.get("sentinelOnboarded", {}))
           and "reference(" in json.dumps(outs.get("sentinelOnboarded", {})),
           "%s: does not assert that Microsoft Sentinel is enabled on the workspace" % GUARD)
-    check("DeployNewWorkspace" in json.dumps(guard.get("condition")) or
-          "deployWorkspace" in json.dumps(guard.get("condition")),
-          "%s: not gated on the create toggle - it would look for a workspace this "
-          "deployment is about to create" % GUARD)
+    # Exact text, not "mentions the toggle": a condition without the `not` runs the guard on a
+    # workspace being created (it fails a greenfield install) and skips it on an existing one
+    # (the protection is gone). Both look like "gated on the toggle".
+    check(guard.get("condition") == "[not(parameters('DeployNewWorkspace'))]",
+          "%s: condition must be exactly [not(parameters('DeployNewWorkspace'))], found %r"
+          % (GUARD, guard.get("condition")))
+    check("'2023-09-01', 'Full'" in json.dumps(outs.get("workspaceId", {}))
+          and "'2023-02-01', 'Full'" in json.dumps(outs.get("sentinelOnboarded", {})),
+          "%s: the references must carry a real api-version and 'Full', or ARM cannot resolve them" % GUARD)
     check("workspaceResourceId" in json.dumps(guard.get("properties", {})),
           "%s: does not resolve the workspace resource id" % GUARD)
 

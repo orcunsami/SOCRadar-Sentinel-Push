@@ -52,6 +52,14 @@ MUTATIONS = [
     ("precheck stops asserting Microsoft Sentinel", T,
      '''"value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2023-02-01', 'Full').id]"''',
      '''"value": "none"''', P),
+    ("precheck runs only when the workspace is being created", T,
+     '''"condition": "[not(parameters('DeployNewWorkspace'))]",
+      "type": "Microsoft.Resources/deployments"''',
+     '''"condition": "[parameters('DeployNewWorkspace')]",
+      "type": "Microsoft.Resources/deployments"''', P),
+    ("precheck reference drops its api-version and Full", T,
+     ''''2023-02-01', 'Full').id]"''',
+     ''''1999-01-01').id]"''', P),
 ]
 
 
