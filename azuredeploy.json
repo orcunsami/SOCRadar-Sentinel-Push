@@ -10,9 +10,9 @@
     },
     "DeployNewWorkspace": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": false,
       "metadata": {
-        "description": "true creates the workspace and enables Microsoft Sentinel on it. false uses an existing Microsoft Sentinel workspace in this resource group."
+        "description": "Default false: the workspace in WorkspaceName must already exist in this resource group, and a misspelled name fails before anything is created. true creates the workspace and enables Microsoft Sentinel on it."
       }
     },
     "WorkspaceLocation": {
@@ -146,9 +146,48 @@
       "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
     },
     "dceName": "SOCRadar-Push-DCE",
-    "dcrName": "SOCRadar-Alarms-Push-DCR"
+    "dcrName": "SOCRadar-Alarms-Push-DCR",
+    "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName'))]"
   },
   "resources": [
+    {
+      "comments": "Resolves the existing workspace, and its Microsoft Sentinel onboarding, before any resource is created. A condition:false resource counts as a satisfied dependency in ARM, so depending on the workspace resource itself does not stop the deployment when WorkspaceName does not exist and DeployNewWorkspace is false -- it would create the data collection endpoint and rule and only then fail. This template onboards Microsoft Sentinel only when it creates the workspace, so an existing workspace without it would fail at the analytics rules after the endpoint and rule were already created; onboardingStates/default returns NotFound in exactly that case, which is the polarity reference() can assert.",
+      "condition": "[not(parameters('DeployNewWorkspace'))]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2021-04-01",
+      "name": "precheck-workspace-exists",
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+          "WorkspaceResourceId": {
+            "value": "[variables('workspaceResourceId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "WorkspaceResourceId": {
+              "type": "string"
+            }
+          },
+          "resources": [],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[reference(parameters('WorkspaceResourceId'), '2023-09-01', 'Full').properties.customerId]"
+            },
+            "sentinelOnboarded": {
+              "type": "string",
+              "value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2023-02-01', 'Full').id]"
+            }
+          }
+        }
+      }
+    },
     {
       "condition": "[parameters('DeployNewWorkspace')]",
       "type": "Microsoft.OperationalInsights/workspaces",
@@ -164,6 +203,7 @@
       "name": "[concat('SecurityInsights(', parameters('WorkspaceName'), ')')]",
       "location": "[variables('location')]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName'))]"
       ],
       "plan": {
@@ -182,6 +222,7 @@
       "apiVersion": "2024-03-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/default')]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationsManagement/solutions', concat('SecurityInsights(', parameters('WorkspaceName'), ')'))]"
       ],
       "properties": {}
@@ -191,6 +232,7 @@
       "apiVersion": "2022-10-01",
       "name": "[concat(parameters('WorkspaceName'), '/', variables('tableName'))]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/providers/onboardingStates', parameters('WorkspaceName'), 'Microsoft.SecurityInsights', 'default')]"
       ],
       "properties": {
@@ -283,7 +325,10 @@
         "networkAcls": {
           "publicNetworkAccess": "Enabled"
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]"
+      ]
     },
     {
       "type": "Microsoft.Insights/dataCollectionRules",
@@ -291,6 +336,7 @@
       "name": "[variables('dcrName')]",
       "location": "[variables('location')]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('WorkspaceName'), variables('tableName'))]"
       ],
@@ -399,6 +445,7 @@
       "name": "[guid(resourceGroup().id, variables('dcrName'), parameters('ServicePrincipalObjectId'))]",
       "scope": "[format('Microsoft.Insights/dataCollectionRules/{0}', variables('dcrName'))]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName'))]"
       ],
       "properties": {
@@ -473,6 +520,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('WorkspaceName'), variables('tableName'))]"
       ]
     },
@@ -538,6 +586,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('WorkspaceName'), variables('tableName'))]"
       ]
     },
@@ -546,6 +595,7 @@
       "apiVersion": "2024-03-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/', variables('automationRuleId'))]",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "socradarAlarmRules"
       ],
       "properties": {
@@ -590,6 +640,7 @@
       "location": "[variables('location')]",
       "kind": "shared",
       "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
         "[resourceId('Microsoft.OperationalInsights/workspaces/tables', parameters('WorkspaceName'), variables('tableName'))]"
       ],
       "properties": {

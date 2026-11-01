@@ -88,8 +88,9 @@ Or with Azure CLI: `az ad sp show --id <Application (client) ID> --query id -o t
 Check the subscription. Region can stay as is.
 
 17. Resource group: **Create new**, or pick an existing one.
-18. **Workspace Name**. `Deploy New Workspace = true` creates the workspace and enables Microsoft Sentinel.
-    For an existing Microsoft Sentinel workspace use `false` and the workspace's resource group.
+18. **Workspace Name**. The default `Deploy New Workspace = false` uses an existing Microsoft Sentinel workspace in
+    the resource group you chose; a name that does not exist fails before anything is created. Set it to `true` to
+    create the workspace and enable Microsoft Sentinel.
 19. **Service Principal Object Id**: the Object ID from 15.
 20. **Review + create**, then **Create**. Takes 1-2 minutes.
 

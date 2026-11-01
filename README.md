@@ -40,10 +40,12 @@ When you set `ServicePrincipalObjectId`, you need Owner or User Access Administr
 | Parameter | Description |
 |-----------|-------------|
 | `WorkspaceName` | Microsoft Sentinel workspace name (not the GUID) |
-| `DeployNewWorkspace` | `true` creates the workspace and enables Microsoft Sentinel on it. `false` uses an existing Microsoft Sentinel workspace in the same resource group. Default `true` |
+| `DeployNewWorkspace` | `false` uses an existing Microsoft Sentinel workspace in the same resource group; a name that does not exist fails before anything is created. `true` creates the workspace and enables Microsoft Sentinel on it. Default `false` |
 | `WorkspaceLocation` | Region of the workspace. Defaults to the resource group region |
 | `ServicePrincipalObjectId` | The Object ID from step 1.4. Empty: no role is assigned, and you give the app the Monitoring Metrics Publisher role on the data collection rule yourself |
 | `TableRetentionDays` | Retention of `SOCRadar_Alarms_CL`. Default 90 |
+
+**Note:** with the default, the workspace in `WorkspaceName` must already exist in the resource group, unless you set `DeployNewWorkspace` to `true`.
 
 To update an existing setup to the latest template, deploy again into the same resource group with the same values.
 
