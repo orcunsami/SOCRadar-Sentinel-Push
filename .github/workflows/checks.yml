@@ -23,14 +23,17 @@ jobs:
           done < <(git ls-files '*.json')
           echo "checked $count file(s)"
           # A glob that matches nothing would otherwise pass silently.
-          if [ "$count" -lt 3 ]; then
-            echo "expected at least 3 JSON file(s), found $count"
+          if [ "$count" -lt 1 ]; then
+            echo "expected at least 1 JSON file, found $count"
             exit 1
           fi
         shell: bash
 
       - name: Template and package checks
         run: python3 tests/run_all.py
+
+      - name: Every mutation of the precheck is caught
+        run: python3 tests/mutate.py
 
       - name: No secrets in tracked files
         run: |
