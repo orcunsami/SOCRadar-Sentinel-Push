@@ -78,6 +78,21 @@ rule for that type picks up the rest, 149 every 10 minutes, starting 12 to 22 mi
 Measured: 150 alarms of one type in one minute all had incidents after 21 minutes, 300 after 31 minutes.
 Above 30, the NRT rule also opens one summary incident that carries the title of the first alarm.
 
+## Where to see it in the Microsoft Defender portal
+
+Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after that it is available only in the Microsoft Defender portal. The incidents here are raised by analytics rules, so when the workspace is connected to the Defender portal they are in its incident queue, with the alert, entities and custom details behind them.
+
+| What | Defender portal |
+|---|---|
+| Incidents | Investigation & response > Incidents & alerts > Incidents (shown as "Cases" in the tenant we looked at). In the tenant we looked at, the list opened with a **Priority score 15-100** filter and showed "No incident cases found" for our incidents (scores 1 to 4); if the list looks empty, click **Reset all** |
+| Finding ours | the `SOCRadar` label (added by the automation rule, shown as a tag in Defender), or the title `[SOCRadar] #<alarm id> - <title>` |
+| Description | shown as unrendered text: the Field / Value table the Azure portal renders appears as raw `|` rows |
+| Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Alarms_CL` row |
+| The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Alarms_CL` (reads secondary workspaces too) |
+| Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product) |
+
+Checked in the Defender portal on a workspace with the Logic App based SOCRadar Incidents product (same table `SOCRadar_Alarms_CL`, same alert title and custom-detail pattern, scheduled rules only). This push template, and its NRT rules, were not opened there.
+
 ## Things to know
 
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
