@@ -4,7 +4,7 @@ SOCRadar sends each new alarm to your workspace through the Azure Monitor Logs I
 Nothing runs in your Azure subscription: no Logic App, no Function App, no storage account.
 
 The template creates the `SOCRadar_Alarms_CL` table, a data collection endpoint and rule,
-two analytic rules per alarm type (10 NRT rules and 10 scheduled backstop rules), an automation
+two analytic rules per alarm type (18 NRT rules and 18 scheduled backstop rules), an automation
 rule that labels incidents `SOCRadar`, and the `SOCRadar Alarms` workbook. Table, workbook and
 incidents are the same as in the pull template ([SOCRadar-Azure-Incidents-CCF](https://github.com/orcunsami/SOCRadar-Azure-Incidents-CCF)).
 The scheduled rules only pick up what the NRT rules missed.
@@ -78,6 +78,33 @@ rule for that type picks up the rest, 149 every 10 minutes, starting 12 to 22 mi
 Measured: 150 alarms of one type in one minute all had incidents after 21 minutes, 300 after 31 minutes.
 Above 30, the NRT rule also opens one summary incident that carries the title of the first alarm.
 
+## Analytics rules
+
+One pair of rules (NRT and scheduled backstop) per main type, matched by `AlarmMainType` (exact text), plus `Other` for every type not in the list. Each rule carries the MITRE tactics and techniques below.
+
+| Main type | Tactics | Techniques |
+|---|---|---|
+| Executive Protection | Reconnaissance | T1589, T1593 |
+| Fraud Protection | InitialAccess | T1566 |
+| Vulnerability Monitoring | Reconnaissance, InitialAccess | T1595, T1190 |
+| Deep&Dark Web Monitoring | CredentialAccess | T1555, T1110 |
+| Internet Asset Inventory Monitoring | Reconnaissance | T1595 |
+| Configuration Weakness | InitialAccess | T1190 |
+| Supply Chain Intelligence | InitialAccess | T1195 |
+| Brand Protection | ResourceDevelopment, InitialAccess | T1583, T1566 |
+| VIP Protection | Reconnaissance | T1589 |
+| Surface Web Monitoring | Reconnaissance, Exfiltration | T1593, T1567 |
+| Vulnerability Intelligence | Reconnaissance, InitialAccess | T1595, T1190 |
+| Threat Hunting | InitialAccess, CommandAndControl | T1566, T1071 |
+| Attack Surface Management | Reconnaissance | T1595, T1596 |
+| Industry Attacks Monitoring | Reconnaissance | T1591 |
+| Botnet | CredentialAccess | T1555, T1056 |
+| Phishing Domain | ResourceDevelopment, InitialAccess | T1583, T1566 |
+| Domain | ResourceDevelopment, InitialAccess | T1583, T1566 |
+| Other | none | none |
+
+The template installs 18 NRT rules; Microsoft allows 50 per workspace, so 32 remain.
+
 ## Where to see it in the Microsoft Defender portal
 
 Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after that it is available only in the Microsoft Defender portal. The incidents here are raised by analytics rules, so when the workspace is connected to the Defender portal they are in its incident queue, with the alert, entities and custom details behind them.
@@ -85,6 +112,7 @@ Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after t
 | What | Defender portal |
 |---|---|
 | Incidents | Investigation & response > Incidents & alerts > Incidents (shown as "Cases" in the tenant we looked at). In the tenant we looked at, the list opened with a **Priority score 15-100** filter and showed "No incident cases found" for our incidents (scores 1 to 4); if the list looks empty, click **Reset all** |
+| Category and priority | with tactics set, the Defender category shows the tactic; the Priority score stays in the Low band (measured 5 Nov 2026: 1 without tactics, 2 to 4 with) |
 | Finding ours | the `SOCRadar` label (added by the automation rule, shown as a tag in Defender), or the title `[SOCRadar] #<alarm id> - <title>` |
 | Description | shown as unrendered text: the Field / Value table the Azure portal renders appears as raw `|` rows |
 | Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Alarms_CL` row |
@@ -96,7 +124,7 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
 ## Things to know
 
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
-- The template adds 10 NRT rules. Microsoft: "No more than 50 rules can be defined per customer."
+- The template adds 18 NRT rules, which leaves 32 of the 50 NRT rules Microsoft allows ("No more than 50 rules can be defined per customer.").
 - A resent alarm is added as a second alert to its open incident when the same rule raised both alerts within 7 days. A closed incident is not reopened; a new one opens.
 - The NRT rule sometimes raises two alerts for one alarm. Both land in the same incident.
 - Per alarm type the NRT rule takes about 30 alarms a minute. The backstop rule takes 149 every 10 minutes and sees rows from 12 minutes to 1 day old, so a big burst of one type still gets incidents, only later: about 900 an hour. An alarm that stays without an incident for a whole day (for example, the rules were switched off) does not get one later.
@@ -122,7 +150,7 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
 ## Remove
 
 1. Turn the Microsoft Sentinel integration off in SOCRadar, so it stops sending.
-2. In the workspace: delete the 20 analytic rules `SOCRadar alarm (NRT): ...` and `SOCRadar alarm: ...`, the automation rule `SOCRadar - label incidents opened by the alarm rules` and the `SOCRadar Alarms` workbook.
+2. In the workspace: delete the 36 analytic rules `SOCRadar alarm (NRT): ...` and `SOCRadar alarm: ...`, the automation rule `SOCRadar - label incidents opened by the alarm rules` and the `SOCRadar Alarms` workbook.
 3. In the resource group: delete the data collection rule `SOCRadar-Alarms-Push-DCR`, then the endpoint `SOCRadar-Push-DCE`, then the `SOCRadar_Alarms_CL` table.
 4. Delete the app registration in Microsoft Entra ID.
 

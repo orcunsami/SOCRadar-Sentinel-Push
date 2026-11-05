@@ -2,7 +2,7 @@
 # Deployment paths a customer can actually take, run against live Azure.
 #
 #   A  missing workspace, defaults (DeployNewWorkspace=false) -> fails, resource group stays EMPTY
-#   B  DeployNewWorkspace=true (opt-in create) -> succeeds: table, endpoint, rule, 10 analytics rules, workbook
+#   B  DeployNewWorkspace=true (opt-in create) -> succeeds: table, endpoint, rule, 36 analytics rules, workbook
 #   C  existing workspace without Microsoft Sentinel, defaults -> fails at the precheck, resource group stays EMPTY
 #   C2 the same workspace after Microsoft Sentinel is enabled -> precheck succeeds and resolves customerId, deployment succeeds
 #   D  redeploy of B at the defaults -> succeeds and leaves the workspace exactly as it was
