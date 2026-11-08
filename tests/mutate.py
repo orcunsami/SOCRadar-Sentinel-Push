@@ -16,6 +16,12 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 T = "azuredeploy.json"
 P = "tests/test_workspace_precheck.py"
 MUTATIONS = [
+    ("push table isolation is removed", T,
+     '''"tableName": "SOCRadar_Push_Alarms_CL"''',
+     '''"tableName": "SOCRadar_Alarms_CL"''', "tests/test_table_isolation.py"),
+    ("deploy harness reads the shared table", "scripts/test_deploy_paths.sh",
+     '''-n SOCRadar_Push_Alarms_CL''',
+     '''-n SOCRadar_Alarms_CL''', "tests/test_table_isolation.py"),
     ("workspace toggle defaults to true again", T,
      '''"DeployNewWorkspace": {
       "type": "bool",

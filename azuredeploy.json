@@ -38,7 +38,7 @@
   },
   "variables": {
     "location": "[parameters('WorkspaceLocation')]",
-    "tableName": "SOCRadar_Alarms_CL",
+    "tableName": "SOCRadar_Push_Alarms_CL",
     "automationRuleId": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName')), 'socradar-ccf-alarm-automation-rule')]",
     "mainTypes": [
       "Executive Protection",
@@ -88,7 +88,7 @@
         {
           "type": 1,
           "content": {
-            "json": "## SOCRadar alarms\nAlarms the SOCRadar Alarms connector wrote to SOCRadar_Alarms_CL. Only the newest row per alarm counts."
+            "json": "## SOCRadar alarms\nAlarms the SOCRadar Alarms connector wrote to SOCRadar_Push_Alarms_CL. Only the newest row per alarm counts."
           },
           "name": "title"
         },
@@ -96,7 +96,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "SOCRadar_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by Status",
+            "query": "SOCRadar_Push_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by Status",
             "size": 1,
             "title": "Alarms by status",
             "timeContext": {
@@ -112,7 +112,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "SOCRadar_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by AlarmMainType\n| sort by Alarms desc",
+            "query": "SOCRadar_Push_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by AlarmMainType\n| sort by Alarms desc",
             "size": 1,
             "title": "Alarms by main type",
             "timeContext": {
@@ -128,7 +128,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "SOCRadar_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by Severity",
+            "query": "SOCRadar_Push_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by Severity",
             "size": 1,
             "title": "Alarms by SOCRadar severity",
             "timeContext": {
@@ -144,7 +144,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "SOCRadar_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by bin(TimeGenerated, 1d)\n| render timechart",
+            "query": "SOCRadar_Push_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| summarize Alarms = count() by bin(TimeGenerated, 1d)\n| render timechart",
             "size": 1,
             "title": "New alarms per day",
             "timeContext": {
@@ -159,7 +159,7 @@
           "type": 3,
           "content": {
             "version": "KqlItem/1.0",
-            "query": "SOCRadar_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| sort by TimeGenerated desc\n| take 50\n| project TimeGenerated, AlarmId, Title, AlarmMainType, Severity, Status",
+            "query": "SOCRadar_Push_Alarms_CL\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| sort by TimeGenerated desc\n| take 50\n| project TimeGenerated, AlarmId, Title, AlarmMainType, Severity, Status",
             "size": 0,
             "title": "Latest 50 alarms",
             "timeContext": {
@@ -461,7 +461,7 @@
               "clv2ws1"
             ],
             "transformKql": "source | extend TimeGenerated = now(), AlarmText = substring(AlarmText, 0, 4000), Severity = toupper(Severity), Status = toupper(Status)",
-            "outputStream": "Custom-SOCRadar_Alarms_CL"
+            "outputStream": "Custom-SOCRadar_Push_Alarms_CL"
           }
         ]
       }
@@ -497,7 +497,7 @@
         "description": "[concat('Raises one alert, and one incident, for every OPEN SOCRadar alarm of main type ', variables('ruleTypes')[copyIndex()], '. Switch the rule off to stop incidents for that type.')]",
         "severity": "Medium",
         "enabled": true,
-        "query": "[concat('let alerted = SecurityAlert\n| where TimeGenerated > ago(1d)\n| where AlertName startswith \"[SOCRadar] #\"\n| extend AlertAlarmId = tostring(extract(@\"#(\\d+) \", 1, AlertName))\n| distinct AlertAlarmId;\nSOCRadar_Alarms_CL\n| where ingestion_time() > ago(1d)\n| where ingestion_time() < ago(12m)\n| where isnotempty(AlarmId)\n| where column_ifexists(\"EventType\", \"\") != \"connection.test\"\n| where AlarmId !in (alerted)\n| where ', if(equals(variables('ruleTypes')[copyIndex()], 'Other'), concat('AlarmMainType !in ', variables('knownTypesKql')), concat('AlarmMainType == \"', variables('ruleTypes')[copyIndex()], '\"')), '\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| where toupper(Status) == \"OPEN\"\n| extend AlarmUrl = coalesce(column_ifexists(\"AlarmUrl\", \"\"), strcat(\"https://platform.socradar.com/app/company/\", CompanyId, \"/alarm-management?tab=\", iff(tostring(AlarmPayload.is_approved) == \"false\", \"potential\", \"approved\"), \"&field=alarmId&operator=equals&value=\", AlarmId))\n| extend SentinelSeverity = case(toupper(Severity) in (\"CRITICAL\", \"HIGH\"), \"High\", toupper(Severity) == \"MEDIUM\", \"Medium\", \"Low\")\n| extend AlarmContent = iff(gettype(AlarmPayload.content) == \"dictionary\", AlarmPayload.content, dynamic({}))\n| mv-apply ContentKey = bag_keys(AlarmContent) to typeof(string) on (\n    extend PlainKey = replace_string(replace_string(replace_string(ContentKey, \"_\", \" \"), \"\\r\", \"\"), \"\\n\", \" \")\n    | extend PlainValue = replace_string(replace_string(tostring(AlarmContent[ContentKey]), \"\\r\", \"\"), \"\\n\", \"; \")\n    | summarize ContentRows = make_list(strcat(PlainKey, \": \", iff(isempty(PlainValue), \"-\", iff(strlen(PlainValue) > 300, strcat(substring(PlainValue, 0, 300), \"...\"), PlainValue)))))\n| extend ContentText = iff(array_length(ContentRows) == 0, \"\", strcat(substring(strcat(\"Content:\\n\", strcat_array(ContentRows, \"\\n\")), 0, 2600), \"\\n\\n\"))\n| extend DetailsText = strcat(substring(replace_string(AlarmText, \"\\r\", \"\"), 0, 1500), iff(strlen(AlarmText) > 1500, \"...\", \"\"))\n| extend DescriptionBody = strcat(\"SOCRadar Alarm\\n\\nAlarm ID: \", AlarmId, \"\\n\\nMain Type: \", coalesce(AlarmMainType, \"N/A\"), \"\\n\\nSub Type: \", coalesce(AlarmSubType, \"N/A\"), \"\\n\\nSeverity: \", Severity, \"\\n\\nStatus: \", Status, \"\\n\\nCreated: \", AlarmDate, \"\\n\\nDetails:\\n\", coalesce(DetailsText, \"No details\"), \"\\n\\n\", ContentText)\n| extend DescriptionLink = strcat(\"View in SOCRadar: \", AlarmUrl)\n| extend BodyBytes = strlen(base64_encode_tostring(DescriptionBody)) * 3 / 4, BodyBudget = 4800 - 2 * strlen(DescriptionLink)\n| extend AlarmDescription = strcat(iff(BodyBytes > BodyBudget, strcat(substring(DescriptionBody, 0, toint(strlen(DescriptionBody) * 1.0 * BodyBudget / BodyBytes) - 10), \"...\\n\\n\"), DescriptionBody), DescriptionLink)\n| extend AlarmDescription = iff(strlen(base64_encode_tostring(AlarmDescription)) * 3 / 4 > 4900, strcat(substring(DescriptionBody, 0, 1000), \"...\\n\\n\", DescriptionLink), AlarmDescription)\n| project TimeGenerated, AlarmId, CompanyId, Title, AlarmDescription, AlarmMainType, AlarmSubType, Severity, Status, AlarmDate, AlarmUrl, SentinelSeverity\n| order by TimeGenerated asc\n| take 149')]",
+        "query": "[concat('let alerted = SecurityAlert\n| where TimeGenerated > ago(1d)\n| where AlertName startswith \"[SOCRadar] #\"\n| extend AlertAlarmId = tostring(extract(@\"#(\\d+) \", 1, AlertName))\n| distinct AlertAlarmId;\nSOCRadar_Push_Alarms_CL\n| where ingestion_time() > ago(1d)\n| where ingestion_time() < ago(12m)\n| where isnotempty(AlarmId)\n| where column_ifexists(\"EventType\", \"\") != \"connection.test\"\n| where AlarmId !in (alerted)\n| where ', if(equals(variables('ruleTypes')[copyIndex()], 'Other'), concat('AlarmMainType !in ', variables('knownTypesKql')), concat('AlarmMainType == \"', variables('ruleTypes')[copyIndex()], '\"')), '\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| where toupper(Status) == \"OPEN\"\n| extend AlarmUrl = coalesce(column_ifexists(\"AlarmUrl\", \"\"), strcat(\"https://platform.socradar.com/app/company/\", CompanyId, \"/alarm-management?tab=\", iff(tostring(AlarmPayload.is_approved) == \"false\", \"potential\", \"approved\"), \"&field=alarmId&operator=equals&value=\", AlarmId))\n| extend SentinelSeverity = case(toupper(Severity) in (\"CRITICAL\", \"HIGH\"), \"High\", toupper(Severity) == \"MEDIUM\", \"Medium\", \"Low\")\n| extend AlarmContent = iff(gettype(AlarmPayload.content) == \"dictionary\", AlarmPayload.content, dynamic({}))\n| mv-apply ContentKey = bag_keys(AlarmContent) to typeof(string) on (\n    extend PlainKey = replace_string(replace_string(replace_string(ContentKey, \"_\", \" \"), \"\\r\", \"\"), \"\\n\", \" \")\n    | extend PlainValue = replace_string(replace_string(tostring(AlarmContent[ContentKey]), \"\\r\", \"\"), \"\\n\", \"; \")\n    | summarize ContentRows = make_list(strcat(PlainKey, \": \", iff(isempty(PlainValue), \"-\", iff(strlen(PlainValue) > 300, strcat(substring(PlainValue, 0, 300), \"...\"), PlainValue)))))\n| extend ContentText = iff(array_length(ContentRows) == 0, \"\", strcat(substring(strcat(\"Content:\\n\", strcat_array(ContentRows, \"\\n\")), 0, 2600), \"\\n\\n\"))\n| extend DetailsText = strcat(substring(replace_string(AlarmText, \"\\r\", \"\"), 0, 1500), iff(strlen(AlarmText) > 1500, \"...\", \"\"))\n| extend DescriptionBody = strcat(\"SOCRadar Alarm\\n\\nAlarm ID: \", AlarmId, \"\\n\\nMain Type: \", coalesce(AlarmMainType, \"N/A\"), \"\\n\\nSub Type: \", coalesce(AlarmSubType, \"N/A\"), \"\\n\\nSeverity: \", Severity, \"\\n\\nStatus: \", Status, \"\\n\\nCreated: \", AlarmDate, \"\\n\\nDetails:\\n\", coalesce(DetailsText, \"No details\"), \"\\n\\n\", ContentText)\n| extend DescriptionLink = strcat(\"View in SOCRadar: \", AlarmUrl)\n| extend BodyBytes = strlen(base64_encode_tostring(DescriptionBody)) * 3 / 4, BodyBudget = 4800 - 2 * strlen(DescriptionLink)\n| extend AlarmDescription = strcat(iff(BodyBytes > BodyBudget, strcat(substring(DescriptionBody, 0, toint(strlen(DescriptionBody) * 1.0 * BodyBudget / BodyBytes) - 10), \"...\\n\\n\"), DescriptionBody), DescriptionLink)\n| extend AlarmDescription = iff(strlen(base64_encode_tostring(AlarmDescription)) * 3 / 4 > 4900, strcat(substring(DescriptionBody, 0, 1000), \"...\\n\\n\", DescriptionLink), AlarmDescription)\n| project TimeGenerated, AlarmId, CompanyId, Title, AlarmDescription, AlarmMainType, AlarmSubType, Severity, Status, AlarmDate, AlarmUrl, SentinelSeverity\n| order by TimeGenerated asc\n| take 149')]",
         "queryFrequency": "PT10M",
         "queryPeriod": "P1D",
         "triggerOperator": "GreaterThan",
@@ -567,7 +567,7 @@
         "description": "[concat('Raises an incident within minutes for every new OPEN SOCRadar alarm of main type ', variables('ruleTypes')[copyIndex()], '.')]",
         "severity": "Medium",
         "enabled": true,
-        "query": "[concat('SOCRadar_Alarms_CL\n| where isnotempty(AlarmId)\n| where column_ifexists(\"EventType\", \"\") != \"connection.test\"\n| where ', if(equals(variables('ruleTypes')[copyIndex()], 'Other'), concat('AlarmMainType !in ', variables('knownTypesKql')), concat('AlarmMainType == \"', variables('ruleTypes')[copyIndex()], '\"')), '\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| where toupper(Status) == \"OPEN\"\n| extend AlarmUrl = coalesce(column_ifexists(\"AlarmUrl\", \"\"), strcat(\"https://platform.socradar.com/app/company/\", CompanyId, \"/alarm-management?tab=\", iff(tostring(AlarmPayload.is_approved) == \"false\", \"potential\", \"approved\"), \"&field=alarmId&operator=equals&value=\", AlarmId))\n| extend SentinelSeverity = case(toupper(Severity) in (\"CRITICAL\", \"HIGH\"), \"High\", toupper(Severity) == \"MEDIUM\", \"Medium\", \"Low\")\n| extend AlarmContent = iff(gettype(AlarmPayload.content) == \"dictionary\", AlarmPayload.content, dynamic({}))\n| mv-apply ContentKey = bag_keys(AlarmContent) to typeof(string) on (\n    extend PlainKey = replace_string(replace_string(replace_string(ContentKey, \"_\", \" \"), \"\\r\", \"\"), \"\\n\", \" \")\n    | extend PlainValue = replace_string(replace_string(tostring(AlarmContent[ContentKey]), \"\\r\", \"\"), \"\\n\", \"; \")\n    | summarize ContentRows = make_list(strcat(PlainKey, \": \", iff(isempty(PlainValue), \"-\", iff(strlen(PlainValue) > 300, strcat(substring(PlainValue, 0, 300), \"...\"), PlainValue)))))\n| extend ContentText = iff(array_length(ContentRows) == 0, \"\", strcat(substring(strcat(\"Content:\\n\", strcat_array(ContentRows, \"\\n\")), 0, 2600), \"\\n\\n\"))\n| extend DetailsText = strcat(substring(replace_string(AlarmText, \"\\r\", \"\"), 0, 1500), iff(strlen(AlarmText) > 1500, \"...\", \"\"))\n| extend DescriptionBody = strcat(\"SOCRadar Alarm\\n\\nAlarm ID: \", AlarmId, \"\\n\\nMain Type: \", coalesce(AlarmMainType, \"N/A\"), \"\\n\\nSub Type: \", coalesce(AlarmSubType, \"N/A\"), \"\\n\\nSeverity: \", Severity, \"\\n\\nStatus: \", Status, \"\\n\\nCreated: \", AlarmDate, \"\\n\\nDetails:\\n\", coalesce(DetailsText, \"No details\"), \"\\n\\n\", ContentText)\n| extend DescriptionLink = strcat(\"View in SOCRadar: \", AlarmUrl)\n| extend BodyBytes = strlen(base64_encode_tostring(DescriptionBody)) * 3 / 4, BodyBudget = 4800 - 2 * strlen(DescriptionLink)\n| extend AlarmDescription = strcat(iff(BodyBytes > BodyBudget, strcat(substring(DescriptionBody, 0, toint(strlen(DescriptionBody) * 1.0 * BodyBudget / BodyBytes) - 10), \"...\\n\\n\"), DescriptionBody), DescriptionLink)\n| extend AlarmDescription = iff(strlen(base64_encode_tostring(AlarmDescription)) * 3 / 4 > 4900, strcat(substring(DescriptionBody, 0, 1000), \"...\\n\\n\", DescriptionLink), AlarmDescription)\n| project TimeGenerated, AlarmId, CompanyId, Title, AlarmDescription, AlarmMainType, AlarmSubType, Severity, Status, AlarmDate, AlarmUrl, SentinelSeverity')]",
+        "query": "[concat('SOCRadar_Push_Alarms_CL\n| where isnotempty(AlarmId)\n| where column_ifexists(\"EventType\", \"\") != \"connection.test\"\n| where ', if(equals(variables('ruleTypes')[copyIndex()], 'Other'), concat('AlarmMainType !in ', variables('knownTypesKql')), concat('AlarmMainType == \"', variables('ruleTypes')[copyIndex()], '\"')), '\n| summarize arg_max(TimeGenerated, *) by AlarmId\n| where toupper(Status) == \"OPEN\"\n| extend AlarmUrl = coalesce(column_ifexists(\"AlarmUrl\", \"\"), strcat(\"https://platform.socradar.com/app/company/\", CompanyId, \"/alarm-management?tab=\", iff(tostring(AlarmPayload.is_approved) == \"false\", \"potential\", \"approved\"), \"&field=alarmId&operator=equals&value=\", AlarmId))\n| extend SentinelSeverity = case(toupper(Severity) in (\"CRITICAL\", \"HIGH\"), \"High\", toupper(Severity) == \"MEDIUM\", \"Medium\", \"Low\")\n| extend AlarmContent = iff(gettype(AlarmPayload.content) == \"dictionary\", AlarmPayload.content, dynamic({}))\n| mv-apply ContentKey = bag_keys(AlarmContent) to typeof(string) on (\n    extend PlainKey = replace_string(replace_string(replace_string(ContentKey, \"_\", \" \"), \"\\r\", \"\"), \"\\n\", \" \")\n    | extend PlainValue = replace_string(replace_string(tostring(AlarmContent[ContentKey]), \"\\r\", \"\"), \"\\n\", \"; \")\n    | summarize ContentRows = make_list(strcat(PlainKey, \": \", iff(isempty(PlainValue), \"-\", iff(strlen(PlainValue) > 300, strcat(substring(PlainValue, 0, 300), \"...\"), PlainValue)))))\n| extend ContentText = iff(array_length(ContentRows) == 0, \"\", strcat(substring(strcat(\"Content:\\n\", strcat_array(ContentRows, \"\\n\")), 0, 2600), \"\\n\\n\"))\n| extend DetailsText = strcat(substring(replace_string(AlarmText, \"\\r\", \"\"), 0, 1500), iff(strlen(AlarmText) > 1500, \"...\", \"\"))\n| extend DescriptionBody = strcat(\"SOCRadar Alarm\\n\\nAlarm ID: \", AlarmId, \"\\n\\nMain Type: \", coalesce(AlarmMainType, \"N/A\"), \"\\n\\nSub Type: \", coalesce(AlarmSubType, \"N/A\"), \"\\n\\nSeverity: \", Severity, \"\\n\\nStatus: \", Status, \"\\n\\nCreated: \", AlarmDate, \"\\n\\nDetails:\\n\", coalesce(DetailsText, \"No details\"), \"\\n\\n\", ContentText)\n| extend DescriptionLink = strcat(\"View in SOCRadar: \", AlarmUrl)\n| extend BodyBytes = strlen(base64_encode_tostring(DescriptionBody)) * 3 / 4, BodyBudget = 4800 - 2 * strlen(DescriptionLink)\n| extend AlarmDescription = strcat(iff(BodyBytes > BodyBudget, strcat(substring(DescriptionBody, 0, toint(strlen(DescriptionBody) * 1.0 * BodyBudget / BodyBytes) - 10), \"...\\n\\n\"), DescriptionBody), DescriptionLink)\n| extend AlarmDescription = iff(strlen(base64_encode_tostring(AlarmDescription)) * 3 / 4 > 4900, strcat(substring(DescriptionBody, 0, 1000), \"...\\n\\n\", DescriptionLink), AlarmDescription)\n| project TimeGenerated, AlarmId, CompanyId, Title, AlarmDescription, AlarmMainType, AlarmSubType, Severity, Status, AlarmDate, AlarmUrl, SentinelSeverity')]",
         "suppressionDuration": "PT5M",
         "suppressionEnabled": false,
         "tactics": "[variables('tacticsMap')[variables('ruleTypes')[copyIndex()]].tactics]",

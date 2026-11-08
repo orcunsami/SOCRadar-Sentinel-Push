@@ -97,8 +97,8 @@ expect "B greenfield succeeds" "$state" Succeeded "$state" "expected Succeeded, 
 rd guard_ran az deployment operation group list -g "$RG_APP" -n path-b \
     --query "[?properties.targetResource.resourceName=='precheck-workspace-exists'] | length(@)" -o tsv
 expect "B skips the precheck" "$guard_ran" 0 "condition false" "the precheck ran against a workspace being created (count '$guard_ran')"
-rd tbl az monitor log-analytics workspace table show -g "$RG_APP" --workspace-name "$WS" -n SOCRadar_Alarms_CL --query name -o tsv
-expect "B creates the alarms table" "$tbl" SOCRadar_Alarms_CL "SOCRadar_Alarms_CL" "table was '$tbl'"
+rd tbl az monitor log-analytics workspace table show -g "$RG_APP" --workspace-name "$WS" -n SOCRadar_Push_Alarms_CL --query name -o tsv
+expect "B creates the Push alarms table" "$tbl" SOCRadar_Push_Alarms_CL "SOCRadar_Push_Alarms_CL" "table was '$tbl'"
 rd dcr az resource list -g "$RG_APP" --resource-type Microsoft.Insights/dataCollectionRules --query "length(@)" -o tsv
 expect "B creates the data collection rule" "$dcr" 1 "1 rule" "expected 1, found '$dcr'"
 

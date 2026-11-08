@@ -3,10 +3,9 @@
 SOCRadar sends each new alarm to your workspace through the Azure Monitor Logs Ingestion API.
 Nothing runs in your Azure subscription: no Logic App, no Function App, no storage account.
 
-The template creates the `SOCRadar_Alarms_CL` table, a data collection endpoint and rule,
+The template creates the `SOCRadar_Push_Alarms_CL` table, a data collection endpoint and rule,
 two analytic rules per alarm type (18 NRT rules and 18 scheduled backstop rules), an automation
-rule that labels incidents `SOCRadar`, and the `SOCRadar Alarms` workbook. Table, workbook and
-incidents are the same as in the pull template ([SOCRadar-Azure-Incidents-CCF](https://github.com/orcunsami/SOCRadar-Azure-Incidents-CCF)).
+rule that labels incidents `SOCRadar`, and the `SOCRadar Alarms` workbook. The Push table is separate from the pull template's `SOCRadar_Alarms_CL` table, so this deployment does not update it.
 The scheduled rules only pick up what the NRT rules missed.
 
 Step by step with screenshots: [docs/setup-guide.md](docs/setup-guide.md).
@@ -43,11 +42,15 @@ When you set `ServicePrincipalObjectId`, you need Owner or User Access Administr
 | `DeployNewWorkspace` | `false` uses an existing Microsoft Sentinel workspace in the same resource group; a name that does not exist fails before anything is created. `true` creates the workspace and enables Microsoft Sentinel on it. Default `false` |
 | `WorkspaceLocation` | Region of the workspace. Defaults to the resource group region |
 | `ServicePrincipalObjectId` | The Object ID from step 1.4. Empty: no role is assigned, and you give the app the Monitoring Metrics Publisher role on the data collection rule yourself |
-| `TableRetentionDays` | Retention of `SOCRadar_Alarms_CL`. Default 90 |
+| `TableRetentionDays` | Retention of `SOCRadar_Push_Alarms_CL`. Default 90 |
 
 **Note:** with the default, the workspace in `WorkspaceName` must already exist in the resource group, unless you set `DeployNewWorkspace` to `true`.
 
 To update an existing setup to the latest template, deploy again into the same resource group with the same values.
+
+### Existing Push installations
+
+`SOCRadar_Push_Alarms_CL` is for a fresh installation. Do not apply this version to an existing Push installation without a migration decision: its earlier rows stay in `SOCRadar_Alarms_CL`, while the updated DCR, rules and workbook read and write the new table. Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
 
 ## 3. Copy the outputs
 
@@ -68,7 +71,7 @@ The same values are on the resources: data collection endpoint > Overview > Logs
 ## 5. Check
 
 ```
-SOCRadar_Alarms_CL | take 10
+SOCRadar_Push_Alarms_CL | take 10
 ```
 
 The first rows of a new table can take up to 15 minutes. After that, a new alarm should open an incident
@@ -115,11 +118,11 @@ Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after t
 | Category and priority | with tactics set, the Defender category shows the tactic; the Priority score stays in the Low band (measured 5 Nov 2026: 1 without tactics, 2 to 4 with) |
 | Finding ours | the `SOCRadar` label (added by the automation rule, shown as a tag in Defender), or the title `[SOCRadar] #<alarm id> - <title>` |
 | Description | shown as unrendered text: the Field / Value table the Azure portal renders appears as raw `|` rows |
-| Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Alarms_CL` row |
-| The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Alarms_CL` (reads secondary workspaces too) |
+| Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Push_Alarms_CL` row |
+| The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Push_Alarms_CL` (reads secondary workspaces too) |
 | Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product). The Workbooks page in the Defender portal shows data from the primary workspace only; if this workspace is secondary, query the tables with Advanced hunting instead. |
 
-Checked in the Defender portal on a workspace with the Logic App based SOCRadar Incidents product (same table `SOCRadar_Alarms_CL`, same alert title and custom-detail pattern, scheduled rules only). This push template, and its NRT rules, were not opened there.
+Checked in the Defender portal on a workspace with the Logic App based SOCRadar Incidents product. It used the AlertBacked table and the same alert-title and custom-detail pattern, with scheduled rules only. This Push template, its separate table and its NRT rules were not opened there.
 
 ## Things to know
 
@@ -135,7 +138,7 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
   Field | Value table and a link to the alarm in SOCRadar. The Azure portal shows the table; the Defender portal
   shows the same text without formatting.
 - Incidents are not written back to SOCRadar. Closing an incident does not change the alarm.
-- Use one route per workspace: this push template or the pull template, not both.
+- Push and pull use separate tables. Configure only one delivery route for an alarm feed unless duplicate incidents are intended.
 
 ## Microsoft limits
 
@@ -151,7 +154,7 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
 
 1. Turn the Microsoft Sentinel integration off in SOCRadar, so it stops sending.
 2. In the workspace: delete the 36 analytic rules `SOCRadar alarm (NRT): ...` and `SOCRadar alarm: ...`, the automation rule `SOCRadar - label incidents opened by the alarm rules` and the `SOCRadar Alarms` workbook.
-3. In the resource group: delete the data collection rule `SOCRadar-Alarms-Push-DCR`, then the endpoint `SOCRadar-Push-DCE`, then the `SOCRadar_Alarms_CL` table.
+3. In the resource group: delete the data collection rule `SOCRadar-Alarms-Push-DCR`, then the endpoint `SOCRadar-Push-DCE`, then the `SOCRadar_Push_Alarms_CL` table.
 4. Delete the app registration in Microsoft Entra ID.
 
 If the template created the workspace, deleting the workspace also removes the rules, the table and the data in it. The data collection rule and endpoint stay in the resource group until you delete them.
