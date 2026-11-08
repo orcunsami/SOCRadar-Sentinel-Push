@@ -52,6 +52,8 @@ To update an existing setup to the latest template, deploy again into the same r
 
 `SOCRadar_Push_Alarms_CL` is for a fresh installation. Do not apply this version to an existing Push installation without a migration decision: its earlier rows stay in `SOCRadar_Alarms_CL`, while the updated DCR, rules and workbook read and write the new table. Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
 
+For a rollback, redeploy the frozen [last stable template](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Forcunsami%2FSOCRadar-Sentinel-Push%2Fd887b39123f95171f54adb2b9965b69c6b4c9314%2Fazuredeploy.json) with the previous values. This is a migration rollback only: it does not move rows between `SOCRadar_Push_Alarms_CL` and `SOCRadar_Alarms_CL`.
+
 ## 3. Copy the outputs
 
 Open the deployment > Outputs and copy `dceUri` and `dcrImmutableId`. `tenantId` is the tenant of the subscription.
@@ -117,12 +119,12 @@ Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after t
 | Incidents | Investigation & response > Incidents & alerts > Incidents (shown as "Cases" in the tenant we looked at). In the tenant we looked at, the list opened with a **Priority score 15-100** filter and showed "No incident cases found" for our incidents (scores 1 to 4); if the list looks empty, click **Reset all** |
 | Category and priority | with tactics set, the Defender category shows the tactic; the Priority score stays in the Low band (measured 5 Nov 2026: 1 without tactics, 2 to 4 with) |
 | Finding ours | the `SOCRadar` label (added by the automation rule, shown as a tag in Defender), or the title `[SOCRadar] #<alarm id> - <title>` |
-| Description | shown as unrendered text: the Field / Value table the Azure portal renders appears as raw `|` rows |
+| Description | plain `key: value` lines. A synthetic Push incident opened in the new Defender UI (incident 21861) showed the list rendering for scalar content. Nested lists and objects are covered by the candidate test; validate their visual rendering in the target tenant after deployment. |
 | Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Push_Alarms_CL` row |
 | The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Push_Alarms_CL` (reads secondary workspaces too) |
 | Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product). The Workbooks page in the Defender portal shows data from the primary workspace only; if this workspace is secondary, query the tables with Advanced hunting instead. |
 
-Checked in the Defender portal on a workspace with the Logic App based SOCRadar Incidents product. It used the AlertBacked table and the same alert-title and custom-detail pattern, with scheduled rules only. This Push template, its separate table and its NRT rules were not opened there.
+The Defender UI evidence above is from a synthetic Push incident. Other navigation and filter observations were checked on a workspace with the Logic App based SOCRadar Incidents product, which had the same alert-title and custom-detail pattern with scheduled rules only. The current Push candidate has not yet had its nested content rendering checked there.
 
 ## Things to know
 
@@ -134,11 +136,16 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
 - Rules skip rows with `EventType` `connection.test`, so SOCRadar's Test connection opens no incident.
 - `TimeGenerated` is the time the row reached Azure, so a late alarm is still seen by the rules. The alarm's own time is in `AlarmDate`.
 - Only alarms created after setup arrive. Older alarms are not sent.
-- The incident description lists the alarm ID, types, severity, status, date and text, then the alarm content as a
-  Field | Value table and a link to the alarm in SOCRadar. The Azure portal shows the table; the Defender portal
-  shows the same text without formatting.
+- The incident description lists the alarm ID, types, severity, status, date and text, then alarm content as plain
+  `key: value` lines and a link to the alarm in SOCRadar. Nested arrays and objects are formatted as readable values
+  by the current candidate; their Azure portal and Defender visual rendering still needs tenant-specific validation.
+- A very long alarm URL is omitted with an explicit marker instead of a truncated link. At the mixed UTF-8 tail
+  byte-limit fallback, alarm content can be omitted so the description stays within its size limit.
 - Incidents are not written back to SOCRadar. Closing an incident does not change the alarm.
 - Push and pull use separate tables. Configure only one delivery route for an alarm feed unless duplicate incidents are intended.
+- Do not install Push and CCF pull in the same workspace. They share GUID seeds, so CCF rules can target the Push
+  table and silently stop opening incidents for CCF alarms. The GUID seeds are deliberately unchanged; changing them
+  requires a separate migration decision.
 
 ## Microsoft limits
 
@@ -154,7 +161,7 @@ Checked in the Defender portal on a workspace with the Logic App based SOCRadar 
 
 1. Turn the Microsoft Sentinel integration off in SOCRadar, so it stops sending.
 2. In the workspace: delete the 36 analytic rules `SOCRadar alarm (NRT): ...` and `SOCRadar alarm: ...`, the automation rule `SOCRadar - label incidents opened by the alarm rules` and the `SOCRadar Alarms` workbook.
-3. In the resource group: delete the data collection rule `SOCRadar-Alarms-Push-DCR`, then the endpoint `SOCRadar-Push-DCE`, then the `SOCRadar_Push_Alarms_CL` table.
-4. Delete the app registration in Microsoft Entra ID.
+3. In the resource group: delete the data collection rule `SOCRadar-Alarms-Push-DCR`, then the endpoint `SOCRadar-Push-DCE`, then the `SOCRadar_Push_Alarms_CL` table. Do not delete `SOCRadar_Alarms_CL`: it can retain legacy Push history or be shared with Pull.
+4. Delete the app registration in Microsoft Entra ID only if it is dedicated to this Push installation. A reused app registration can serve other DCR integrations.
 
 If the template created the workspace, deleting the workspace also removes the rules, the table and the data in it. The data collection rule and endpoint stay in the resource group until you delete them.

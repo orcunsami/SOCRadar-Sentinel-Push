@@ -2,7 +2,7 @@ name: Checks
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, e2e-push-0111]
   pull_request:
   workflow_dispatch:
 
@@ -34,6 +34,9 @@ jobs:
 
       - name: Every mutation of the precheck is caught
         run: python3 tests/mutate.py
+
+      - name: Every mutation of the incident description is caught
+        run: python3 tests/mutate_description.py
 
       - name: No secrets in tracked files
         run: |

@@ -1,4 +1,4 @@
-"""Restore Markdown and remove the byte guard; each must turn the test red."""
+"""Remove a plain-text lexer or its safety envelope; each must turn the test red."""
 import json
 import os
 from pathlib import Path
@@ -8,9 +8,24 @@ import sys
 root=Path(__file__).resolve().parents[1]
 path=root/'azuredeploy.json'
 original=path.read_text()
-mutations=[('markdown header',lambda q:q.replace('Content:', '| Field | Value |')),
-           ('byte guard removed',lambda q:q.replace('> 4900','> 99999')),
-           ('markdown pipe escape',lambda q:q.replace('strcat(PlainKey,', 'strcat("\\\\|", PlainKey,'))]
+mutations=[('lexer removed',lambda q:q.replace('extract_all(@"\\x22', 'extract_all(@"BROKEN')),
+           ('mv-apply grammar removed',lambda q:q.replace('mv-apply with_itemindex=TokenIndex Token = ContentTokens to typeof(dynamic) on (', 'mv-apply Token = ContentTokens on (')),
+           ('json decode removed',lambda q:q.replace('parse_json(strcat("\\\"", StringInner, "\\\""))', 'tostring(StringInner)')),
+           ('key newline guard removed',lambda q:q.replace(', "\\n", " ")', ', "\\n", "")')),
+           ('native type encoding removed',lambda q:q.replace('dynamic_to_json(pack_array(AlarmContent[ContentKey]))', 'tostring(AlarmContent[ContentKey])')),
+           ('exponent scalar removed',lambda q:q.replace('(?:[eE][+-]?\\d+)?', '')),
+           ('empty string token lost',lambda q:q.replace('Punctuation in ("}", "]"), iff(Depth == 0, "", ")"),\n            "-")', 'Punctuation in ("}", "]"), iff(Depth == 0, "", ")"),\n            ""')),
+           ('root comma separator broken',lambda q:q.replace('iff(RootKind == "array", ", ", "; ")', '", "')),
+           ('nested group broken',lambda q:q.replace('iff(Depth == 1, "", "(")', '""')),
+           ('input cap removed',lambda q:q.replace('substring(ContentJson, 0, 6000)', 'ContentJson')),
+           ('cell cap removed',lambda q:q.replace('strlen(ContentValue) > 300', 'strlen(ContentValue) > 99999')),
+           ('content cap removed',lambda q:q.replace(')), 0, 2600)', ')), 0, 99999)')),
+           ('details cap removed',lambda q:q.replace('"), 0, 1500)', '"), 0, 99999)')),
+           ('no details fallback removed',lambda q:q.replace('coalesce(DetailsText, "No details")', 'DetailsText')),
+           ('detail carriage return guard removed',lambda q:q.replace('replace_string(AlarmText, "\\r", "")', 'AlarmText')),
+           ('long link cap removed',lambda q:q.replace('FullDescriptionLinkBytes > 768', 'FullDescriptionLinkBytes > 999999')),
+           ('body budget clamp removed',lambda q:q.replace('max_of(0, 4800 - DescriptionLinkBytes)', '4800 - DescriptionLinkBytes')),
+           ('byte guard removed',lambda q:q.replace('> 4900','> 99999'))]
 blind=[]
 try:
     for name, mutate in mutations:
