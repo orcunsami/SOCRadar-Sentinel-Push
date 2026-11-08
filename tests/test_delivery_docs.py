@@ -16,6 +16,11 @@ def require(text, description):
 
 
 require("`key: value`", "plain description format")
+require("If your installation currently uses `SOCRadar_Alarms_CL`, use this migration path", "actionable migration path")
+require("input stream and SOCRadar form fields are unchanged", "migration input compatibility")
+require("workbook starts with no old-table history", "migration workbook history limitation")
+require("Update your own KQL queries to `SOCRadar_Push_Alarms_CL`", "migration query step")
+require("does not duplicate incidents", "migration incident behavior")
 require("CCF pull in the same workspace", "CCF shared-workspace warning")
 require("GUID seeds are deliberately unchanged", "CCF GUID-seed decision")
 require(STABLE_SHA, "fixed rollback revision")
@@ -28,8 +33,12 @@ require("tenant-specific validation", "unmeasured visual-rendering limitation")
 
 if "Field | Value table" in README or "AlertBacked" in README:
     raise AssertionError("README retains superseded description or internal-table wording")
-if "branches: [master, main, e2e-push-0111]" not in WORKFLOW:
-    raise AssertionError("checks workflow does not include e2e-push-0111")
+if "candidate" in README.lower() or "21861" in README:
+    raise AssertionError("README retains internal candidate wording")
+for output in ("DceUri", "DcrImmutableId", "TenantId"):
+    require("`%s`" % output, "exact deployment output name " + output)
+if 'branches: [master, main, "e2e-*"]' not in WORKFLOW:
+    raise AssertionError("checks workflow does not include the permanent e2e branch policy")
 if "python3 tests/mutate_description.py" not in WORKFLOW:
     raise AssertionError("checks workflow does not run description mutations")
 

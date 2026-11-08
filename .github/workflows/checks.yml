@@ -2,7 +2,7 @@ name: Checks
 
 on:
   push:
-    branches: [master, main, e2e-push-0111]
+    branches: [master, main, "e2e-*"]
   pull_request:
   workflow_dispatch:
 

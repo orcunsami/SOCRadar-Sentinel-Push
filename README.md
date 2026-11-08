@@ -46,17 +46,24 @@ When you set `ServicePrincipalObjectId`, you need Owner or User Access Administr
 
 **Note:** with the default, the workspace in `WorkspaceName` must already exist in the resource group, unless you set `DeployNewWorkspace` to `true`.
 
-To update an existing setup to the latest template, deploy again into the same resource group with the same values.
+For a new installation, or one already using `SOCRadar_Push_Alarms_CL`, deploy an update into the same resource group with the same values.
 
-### Existing Push installations
+### Updating an existing Push installation
 
-`SOCRadar_Push_Alarms_CL` is for a fresh installation. Do not apply this version to an existing Push installation without a migration decision: its earlier rows stay in `SOCRadar_Alarms_CL`, while the updated DCR, rules and workbook read and write the new table. Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
+If your installation currently uses `SOCRadar_Alarms_CL`, use this migration path:
+
+1. Keep `SOCRadar_Alarms_CL` for its history and record any of your own KQL queries that read it.
+2. Redeploy this template to the same resource group with the same values. The input stream and SOCRadar form fields are unchanged; the DCR, rules and workbook switch to `SOCRadar_Push_Alarms_CL`.
+3. Update your own KQL queries to `SOCRadar_Push_Alarms_CL`. The workbook starts with no old-table history, and old-table queries do not silently receive new rows. Use a `union` query only when you need both histories together.
+4. Send one new alarm and verify one row in the new table and one incident. Existing rows are not copied, and replacing the rules does not duplicate incidents.
+
+Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
 
 For a rollback, redeploy the frozen [last stable template](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Forcunsami%2FSOCRadar-Sentinel-Push%2Fd887b39123f95171f54adb2b9965b69c6b4c9314%2Fazuredeploy.json) with the previous values. This is a migration rollback only: it does not move rows between `SOCRadar_Push_Alarms_CL` and `SOCRadar_Alarms_CL`.
 
 ## 3. Copy the outputs
 
-Open the deployment > Outputs and copy `dceUri` and `dcrImmutableId`. `tenantId` is the tenant of the subscription.
+Open the deployment > Outputs and copy `DceUri` and `DcrImmutableId`. `TenantId` is the tenant of the subscription.
 
 The same values are on the resources: data collection endpoint > Overview > Logs Ingestion, and data collection rule > Overview > Immutable ID.
 
@@ -67,8 +74,8 @@ The same values are on the resources: data collection endpoint > Overview > Logs
 | Tenant ID | Directory (tenant) ID, step 1.2 |
 | Application (client) ID | Application (client) ID, step 1.2 |
 | Application secret | the secret value, step 1.3 |
-| Data Collection Endpoint URI | `dceUri`, step 3 |
-| Data Collection Rule immutable ID | `dcrImmutableId`, step 3 |
+| Data Collection Endpoint URI | `DceUri`, step 3 |
+| Data Collection Rule immutable ID | `DcrImmutableId`, step 3 |
 
 ## 5. Check
 
@@ -119,12 +126,12 @@ Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after t
 | Incidents | Investigation & response > Incidents & alerts > Incidents (shown as "Cases" in the tenant we looked at). In the tenant we looked at, the list opened with a **Priority score 15-100** filter and showed "No incident cases found" for our incidents (scores 1 to 4); if the list looks empty, click **Reset all** |
 | Category and priority | with tactics set, the Defender category shows the tactic; the Priority score stays in the Low band (measured 5 Nov 2026: 1 without tactics, 2 to 4 with) |
 | Finding ours | the `SOCRadar` label (added by the automation rule, shown as a tag in Defender), or the title `[SOCRadar] #<alarm id> - <title>` |
-| Description | plain `key: value` lines. A synthetic Push incident opened in the new Defender UI (incident 21861) showed the list rendering for scalar content. Nested lists and objects are covered by the candidate test; validate their visual rendering in the target tenant after deployment. |
+| Description | plain `key: value` lines. A synthetic Push incident in the Defender UI showed readable scalar, list and nested-object values. Validate visual rendering in the target tenant after deployment. |
 | Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Push_Alarms_CL` row |
 | The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Push_Alarms_CL` (reads secondary workspaces too) |
 | Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product). The Workbooks page in the Defender portal shows data from the primary workspace only; if this workspace is secondary, query the tables with Advanced hunting instead. |
 
-The Defender UI evidence above is from a synthetic Push incident. Other navigation and filter observations were checked on a workspace with the Logic App based SOCRadar Incidents product, which had the same alert-title and custom-detail pattern with scheduled rules only. The current Push candidate has not yet had its nested content rendering checked there.
+The Defender UI evidence above is from a synthetic Push incident. Other navigation and filter observations were checked on a workspace with the Logic App based SOCRadar Incidents product, which had the same alert-title and custom-detail pattern with scheduled rules only.
 
 ## Things to know
 
@@ -138,7 +145,7 @@ The Defender UI evidence above is from a synthetic Push incident. Other navigati
 - Only alarms created after setup arrive. Older alarms are not sent.
 - The incident description lists the alarm ID, types, severity, status, date and text, then alarm content as plain
   `key: value` lines and a link to the alarm in SOCRadar. Nested arrays and objects are formatted as readable values
-  by the current candidate; their Azure portal and Defender visual rendering still needs tenant-specific validation.
+  before the alert is sent; their Azure portal and Defender visual rendering still needs tenant-specific validation.
 - A very long alarm URL is omitted with an explicit marker instead of a truncated link. At the mixed UTF-8 tail
   byte-limit fallback, alarm content can be omitted so the description stays within its size limit.
 - Incidents are not written back to SOCRadar. Closing an incident does not change the alarm.
