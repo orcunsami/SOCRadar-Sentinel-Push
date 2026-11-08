@@ -117,7 +117,7 @@ Microsoft Sentinel in the Azure portal is supported until 31 March 2027; after t
 | Description | shown as unrendered text: the Field / Value table the Azure portal renders appears as raw `|` rows |
 | Alert details | open the alert: analytics rule name and description, the entities, the custom details, and Related events > Query results with the `SOCRadar_Alarms_CL` row |
 | The table in KQL | Investigation & response > Hunting > Advanced hunting: `SOCRadar_Alarms_CL` (reads secondary workspaces too) |
-| Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product) |
+| Dashboard | Microsoft Sentinel > Threat management > Workbooks (the path the other SOCRadar integrations use; not opened for this product). The Workbooks page in the Defender portal shows data from the primary workspace only; if this workspace is secondary, query the tables with Advanced hunting instead. |
 
 Checked in the Defender portal on a workspace with the Logic App based SOCRadar Incidents product (same table `SOCRadar_Alarms_CL`, same alert title and custom-detail pattern, scheduled rules only). This push template, and its NRT rules, were not opened there.
 
