@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class GateHardeningTests(unittest.TestCase):
     def run_empty_suite(self, content=None, adapter=False):
-        with tempfile.TemporaryDirectory(prefix="push0111-empty-", dir="/tmp") as directory:
+        with tempfile.TemporaryDirectory(prefix="gate-empty-", dir="/tmp") as directory:
             tests = Path(directory) / "tests"
             tests.mkdir()
             for name in ("run_all.py", "run_one.py"):
@@ -52,6 +52,19 @@ class GateHardeningTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1, "HARDEN:zero-checks")
         self.assertIn("NO_CHECKS", result.stdout + result.stderr)
 
+    def test_documented_trusted_test_code_limits(self):
+        probes = {
+            "forged receipt": "import os\nprint('CHECKS_PASSED 1', flush=True)\nos._exit(0)\n",
+            "empty check helper": "def check(condition): pass\ncheck(False)\n",
+        }
+        for name, content in probes.items():
+            with self.subTest(documented_limit=name):
+                result = self.run_empty_suite(content)
+                self.assertEqual(result.returncode, 0, "Documented trusted-code limit changed; review tests/README.md")
+        notes = (ROOT / "tests/README.md").read_text()
+        self.assertIn("forged receipt", notes)
+        self.assertIn("empty check/require", notes)
+
     def test_only_expected_assertion_is_a_catch(self):
         cases = [
             ("raise AssertionError('TABLE: table-name')", "TABLE: table-name", True),
@@ -80,7 +93,7 @@ class GateHardeningTests(unittest.TestCase):
     def run_secret_gate(self, with_probe=False, scanner_error=False):
         workflow = (ROOT / ".github/workflows/checks.yml").read_text()
         script = textwrap.dedent(workflow.split("- name: No secrets in tracked files\n        run: |\n", 1)[1])
-        with tempfile.TemporaryDirectory(prefix="push0111-scan-", dir="/tmp") as directory:
+        with tempfile.TemporaryDirectory(prefix="gate-scan-", dir="/tmp") as directory:
             root = Path(directory)
             # Generated noncredential; never copied from a capture or real key.
             probe = "sk-" + "0" * 24
@@ -93,6 +106,9 @@ class GateHardeningTests(unittest.TestCase):
                 if scanner_error == "after-calibration":
                     executable.write_text("#!/bin/sh\nif [ -f .scan-ready ]; then exit 2; fi\n"
                                           ": > .scan-ready\nexec /usr/bin/grep \"$@\"\n")
+                elif scanner_error == "blind-calibration":
+                    executable.write_text("#!/bin/sh\nif [ ! -f .scan-ready ]; then\n"
+                                          "  : > .scan-ready\n  exit 1\nfi\nexec /usr/bin/grep \"$@\"\n")
                 else:
                     executable.write_text("#!/bin/sh\nexit 2\n")
                 executable.chmod(0o755)
@@ -112,6 +128,11 @@ class GateHardeningTests(unittest.TestCase):
         error = self.run_secret_gate(scanner_error="after-calibration")
         self.assertEqual(error.returncode, 1, "HARDEN:scan-error")
         self.assertIn("secret scan failed", error.stdout)
+
+    def test_blind_calibration_is_failure(self):
+        result = self.run_secret_gate(scanner_error="blind-calibration")
+        self.assertEqual(result.returncode, 1, "HARDEN:calibration-blind")
+        self.assertIn("scan is blind", result.stdout)
 
 if __name__ == "__main__":
     unittest.main()

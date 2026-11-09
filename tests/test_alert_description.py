@@ -5,6 +5,7 @@ import re
 import unittest
 
 TEMPLATE = Path(__file__).resolve().parents[1] / 'azuredeploy.json'
+DECODED_STRING = r'replace_string(replace_string(replace_string(tostring(parse_json(strcat("\"", StringInner, "\""))), "\r", ""), "\n", "; "), "\"", "”")'
 
 class AlertDescriptionTests(unittest.TestCase):
     def test_both_rule_kinds_use_plain_text(self):
@@ -38,6 +39,8 @@ class AlertDescriptionTests(unittest.TestCase):
                 self.assertIn('isnotempty(StringInner), DecodedString',q)
                 self.assertIn('Punctuation in ("}", "]"), iff(Depth == 0, "", ")"),\n            "-")',q, 'DESCRIPTION:empty')
                 self.assertIn('"\\n", "; "',q, 'DESCRIPTION:value-newline')
+                self.assertTrue(re.findall(r'\bDecodedString\s*=\s*([^\n]+)', q) == [DECODED_STRING],
+                                'DESCRIPTION:value-layers')
                 self.assertIn('Punctuation == ",", iff(RootKind == "array", ", ", "; ")',q, 'DESCRIPTION:separator')
                 self.assertIn('Punctuation in ("{", "["), iff(Depth == 1, "", "(")',q, 'DESCRIPTION:nested')
                 self.assertIn('Punctuation in ("}", "]"), iff(Depth == 0, "", ")")',q)

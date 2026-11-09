@@ -2,6 +2,7 @@
 """Check the delivery, rollback, and CI promises exposed to operators."""
 
 from pathlib import Path
+import json
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,9 +32,38 @@ require("dedicated to this Push installation", "reused app-registration warning"
 require("very long alarm URL is omitted with an explicit marker", "long-URL omission behavior")
 require("mixed UTF-8 tail", "mixed-tail content limitation")
 require("tenant-specific validation", "unmeasured visual-rendering limitation")
-require("A closed incident is not reopened; a new one opens.", "declared closed-incident resend limit")
-require("sees rows from 12 minutes to 1 day old", "declared queryPeriod limit")
-require("does not get one later", "declared expired backstop limit")
+limits = README.split("## Things to know\n", 1)[1].split("\n## ", 1)[0]
+for phrase in ("A closed incident is not reopened; a new one opens.",
+               "sees rows from 12 minutes to 1 day old", "does not get one later",
+               "within 7 days", "every 10 minutes"):
+    if phrase not in limits:
+        raise AssertionError("LIMIT:documentation")
+
+template = json.loads((ROOT / "azuredeploy.json").read_text())
+upgrade = README.split("### Updating an existing Push installation\n", 1)[1].split("\n## ", 1)[0]
+for phrase in ("two analytic rules can fail with `One of the tables does not exist`",
+               "Only for that error, wait until `SOCRadar_Push_Alarms_CL | take 0` succeeds in Logs",
+               "redeploy the same template once more with the same values",
+               "95.5 seconds; this is an observation, not a guaranteed duration",
+               "For any other error, or if this retry fails, stop"):
+    if phrase not in upgrade:
+        raise AssertionError("LIMIT:upgrade-retry")
+rules = [r for r in template["resources"] if r.get("kind") in ("Scheduled", "NRT")]
+if len(rules) != 2 or {r["kind"] for r in rules} != {"Scheduled", "NRT"}:
+    raise AssertionError("LIMIT:rule-kinds")
+for rule in rules:
+    properties = rule["properties"]
+    if rule["kind"] == "Scheduled":
+        for field, expected in (("queryPeriod", "P1D"), ("queryFrequency", "PT10M")):
+            if properties.get(field) != expected:
+                raise AssertionError("LIMIT:" + field)
+    elif any(field in properties for field in ("queryPeriod", "queryFrequency")):
+        raise AssertionError("LIMIT:nrt-cadence")
+    grouping = properties["incidentConfiguration"]["groupingConfiguration"]
+    if grouping.get("reopenClosedIncident") is not False:
+        raise AssertionError("LIMIT:reopenClosedIncident")
+    if grouping.get("lookbackDuration") != "P7D":
+        raise AssertionError("LIMIT:lookbackDuration")
 
 for name, document, heading in (
     ("README", README, "## 1. Register an application"),
@@ -60,5 +90,7 @@ if 'branches: [master, main, "e2e-*"]' not in WORKFLOW:
     raise AssertionError("checks workflow does not include the permanent e2e branch policy")
 if "python3 tests/mutate_description.py" not in WORKFLOW:
     raise AssertionError("checks workflow does not run description mutations")
+if "python3 tests/mutate_limits.py" not in WORKFLOW:
+    raise AssertionError("checks workflow does not run documented-limit mutations")
 
 print("delivery documentation and checks workflow contract passed")

@@ -33,7 +33,9 @@ jobs:
         run: python3 tests/run_all.py
 
       - name: Every mutation of the precheck is caught
-        run: python3 tests/mutate.py
+        run: |
+          python3 tests/mutate.py
+          python3 tests/mutate_limits.py
 
       - name: Every mutation of the incident description is caught
         run: python3 tests/mutate_description.py

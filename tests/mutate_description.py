@@ -9,6 +9,27 @@ from assertion_result import caught
 root=Path(__file__).resolve().parents[1]
 path=root/'azuredeploy.json'
 original=path.read_text()
+
+def drop_value_layer(query, depth):
+    lines=[line for line in query.splitlines() if 'DecodedString =' in line]
+    if len(lines)!=1: raise RuntimeError('DecodedString mutation target is not unique')
+    line=lines[0];prefix,expression=line.split('DecodedString = ',1)
+    parents=[]
+    for level in range(depth+1):
+        if not expression.startswith('replace_string(') or not expression.endswith(')'):
+            raise RuntimeError('Expected a replace_string layer')
+        body,old,new=expression[len('replace_string('):-1].rsplit(',',2)
+        if level<depth: parents.append((old,new))
+        expression=body
+    for old,new in reversed(parents):
+        expression='replace_string('+expression+','+old+','+new+')'
+    return query.replace(line,prefix+'DecodedString = '+expression,1)
+
+def override_value(query):
+    lines=[line for line in query.splitlines() if 'DecodedString =' in line]
+    if len(lines)!=1: raise RuntimeError('DecodedString mutation target is not unique')
+    return query.replace(lines[0],lines[0]+'\n        | extend DecodedString = "overridden"',1)
+
 mutations=[('lexer removed',lambda q:q.replace('extract_all(@"\\x22', 'extract_all(@"BROKEN')),
            ('mv-apply grammar removed',lambda q:q.replace('mv-apply with_itemindex=TokenIndex Token = ContentTokens to typeof(dynamic) on (', 'mv-apply Token = ContentTokens on (')),
            ('json decode removed',lambda q:q.replace('parse_json(strcat("\\\"", StringInner, "\\\""))', 'tostring(StringInner)')),
@@ -35,12 +56,16 @@ mutations=[('lexer removed',lambda q:q.replace('extract_all(@"\\x22', 'extract_a
            ('detail carriage return guard removed',lambda q:q.replace('replace_string(AlarmText, "\\r", "")', 'AlarmText')),
            ('long link cap removed',lambda q:q.replace('FullDescriptionLinkBytes > 768', 'FullDescriptionLinkBytes > 999999')),
            ('body budget clamp removed',lambda q:q.replace('max_of(0, 4800 - DescriptionLinkBytes)', '4800 - DescriptionLinkBytes')),
-           ('byte guard removed',lambda q:q.replace('> 4900','> 99999'))]
+           ('byte guard removed',lambda q:q.replace('> 4900','> 99999')),
+           ('value quote layer removed',lambda q:drop_value_layer(q,0)),
+           ('value carriage return layer removed',lambda q:drop_value_layer(q,2)),
+           ('decoded value overridden',override_value)]
 expected = ['lexer', 'grammar', 'decode', 'key-newline', 'native-type',
             'json-lossless', 'json-lossless', 'packed-lossless', 'lexer-input',
             'exponent', 'empty', 'separator', 'nested', 'fallback', 'serialize',
             'delta', 'bytes', 'value-newline', 'reserve', 'cell-cap', 'content-cap',
-            'details-cap', 'no-details', 'detail-cr', 'link-cap', 'body-clamp', 'byte-guard']
+            'details-cap', 'no-details', 'detail-cr', 'link-cap', 'body-clamp', 'byte-guard',
+            'value-layers', 'value-layers', 'value-layers']
 if len(expected) != len(mutations):
     raise RuntimeError('Missing expected description assertion')
 blind=[]

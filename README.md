@@ -59,6 +59,8 @@ If your installation currently uses `SOCRadar_Alarms_CL`, use this migration pat
 3. Update your own KQL queries to `SOCRadar_Push_Alarms_CL`. The new workbook starts empty, so it does not show history from the old table. Queries that still use `SOCRadar_Alarms_CL` do not receive new rows. Use a `union` query only when you need both histories together.
 4. When the first real alarm arrives, verify one row in the new table, one incident, and no duplicate incident. Existing rows are not copied.
 
+On the first upgrade deployment, two analytic rules can fail with `One of the tables does not exist` while the new table is not yet queryable. Only for that error, wait until `SOCRadar_Push_Alarms_CL | take 0` succeeds in Logs, then redeploy the same template once more with the same values. Our measured second deployment succeeded in 95.5 seconds; this is an observation, not a guaranteed duration. For any other error, or if this retry fails, stop and inspect the deployment errors.
+
 Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
 
 For a rollback, redeploy the frozen [last stable template](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Forcunsami%2FSOCRadar-Sentinel-Push%2Fd887b39123f95171f54adb2b9965b69c6b4c9314%2Fazuredeploy.json) with the previous values. This is a migration rollback only: it does not move rows between `SOCRadar_Push_Alarms_CL` and `SOCRadar_Alarms_CL`.
