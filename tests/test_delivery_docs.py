@@ -18,9 +18,9 @@ def require(text, description):
 require("`key: value`", "plain description format")
 require("If your installation currently uses `SOCRadar_Alarms_CL`, use this migration path", "actionable migration path")
 require("input stream and SOCRadar form fields are unchanged", "migration input compatibility")
-require("workbook starts with no old-table history", "migration workbook history limitation")
+require("new workbook starts empty", "migration workbook history limitation")
 require("Update your own KQL queries to `SOCRadar_Push_Alarms_CL`", "migration query step")
-require("does not duplicate incidents", "migration incident behavior")
+require("When the first real alarm arrives, verify one row in the new table, one incident, and no duplicate incident", "migration verification step")
 require("CCF pull in the same workspace", "CCF shared-workspace warning")
 require("GUID seeds are deliberately unchanged", "CCF GUID-seed decision")
 require(STABLE_SHA, "fixed rollback revision")
@@ -35,7 +35,7 @@ if "Field | Value table" in README or "AlertBacked" in README:
     raise AssertionError("README retains superseded description or internal-table wording")
 if "candidate" in README.lower() or "21861" in README:
     raise AssertionError("README retains internal candidate wording")
-for output in ("DceUri", "DcrImmutableId", "TenantId"):
+for output in ("dceUri", "dcrImmutableId", "tenantId"):
     require("`%s`" % output, "exact deployment output name " + output)
 if 'branches: [master, main, "e2e-*"]' not in WORKFLOW:
     raise AssertionError("checks workflow does not include the permanent e2e branch policy")

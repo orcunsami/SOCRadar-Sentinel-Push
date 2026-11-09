@@ -1,6 +1,7 @@
 """Pin Defender plain-text formatting and the existing alert safety envelope."""
 import json
 from pathlib import Path
+import re
 import unittest
 
 TEMPLATE = Path(__file__).resolve().parents[1] / 'azuredeploy.json'
@@ -24,6 +25,14 @@ class AlertDescriptionTests(unittest.TestCase):
                 self.assertIn('dynamic_to_json(pack_array(AlarmContent[ContentKey]))',q)
                 self.assertIn('substring(ContentPacked, 1, strlen(ContentPacked) - 2)',q)
                 self.assertNotIn('substring(ContentJson, 0, 6000)',q)
+                # ContentPacked is losslessly unwrapped before lexical tokenization.
+                # Any pre-lexer ContentJson truncation corrupts quoted long values.
+                self.assertRegex(q, r'ContentJson = substring\(ContentPacked, 1, strlen\(ContentPacked\) - 2\)')
+                self.assertEqual(re.findall(r'\bContentPacked\s*=\s*([^\n]+)', q), ['dynamic_to_json(pack_array(AlarmContent[ContentKey]))'])
+                self.assertEqual(re.findall(r'\bContentJson\s*=\s*([^\n]+)', q), ['substring(ContentPacked, 1, strlen(ContentPacked) - 2)'])
+                token_sources = re.findall(r'\bContentTokens\s*=\s*([^\n]+)', q)
+                self.assertEqual(len(token_sources), 1)
+                self.assertTrue(token_sources[0].endswith(', ContentJson)'))
                 self.assertIn('RootKind = gettype(AlarmContent[ContentKey])',q)
                 self.assertIn('(?:[eE][+-]?\\d+)?',q)
                 self.assertIn('isnotempty(StringInner), DecodedString',q)

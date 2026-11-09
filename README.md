@@ -54,8 +54,8 @@ If your installation currently uses `SOCRadar_Alarms_CL`, use this migration pat
 
 1. Keep `SOCRadar_Alarms_CL` for its history and record any of your own KQL queries that read it.
 2. Redeploy this template to the same resource group with the same values. The input stream and SOCRadar form fields are unchanged; the DCR, rules and workbook switch to `SOCRadar_Push_Alarms_CL`.
-3. Update your own KQL queries to `SOCRadar_Push_Alarms_CL`. The workbook starts with no old-table history, and old-table queries do not silently receive new rows. Use a `union` query only when you need both histories together.
-4. Send one new alarm and verify one row in the new table and one incident. Existing rows are not copied, and replacing the rules does not duplicate incidents.
+3. Update your own KQL queries to `SOCRadar_Push_Alarms_CL`. The new workbook starts empty, so it does not show history from the old table. Queries that still use `SOCRadar_Alarms_CL` do not receive new rows. Use a `union` query only when you need both histories together.
+4. When the first real alarm arrives, verify one row in the new table, one incident, and no duplicate incident. Existing rows are not copied.
 
 Rolling back the template restores future writes and queries to the old table; it does not copy data between tables.
 
@@ -63,7 +63,7 @@ For a rollback, redeploy the frozen [last stable template](https://portal.azure.
 
 ## 3. Copy the outputs
 
-Open the deployment > Outputs and copy `DceUri` and `DcrImmutableId`. `TenantId` is the tenant of the subscription.
+Open the deployment > Outputs and copy `dceUri` and `dcrImmutableId`. `tenantId` is the tenant of the subscription.
 
 The same values are on the resources: data collection endpoint > Overview > Logs Ingestion, and data collection rule > Overview > Immutable ID.
 
@@ -74,8 +74,8 @@ The same values are on the resources: data collection endpoint > Overview > Logs
 | Tenant ID | Directory (tenant) ID, step 1.2 |
 | Application (client) ID | Application (client) ID, step 1.2 |
 | Application secret | the secret value, step 1.3 |
-| Data Collection Endpoint URI | `DceUri`, step 3 |
-| Data Collection Rule immutable ID | `DcrImmutableId`, step 3 |
+| Data Collection Endpoint URI | `dceUri`, step 3 |
+| Data Collection Rule immutable ID | `dcrImmutableId`, step 3 |
 
 ## 5. Check
 
