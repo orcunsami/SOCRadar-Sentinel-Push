@@ -19,9 +19,11 @@ Step by step with screenshots: [docs/setup-guide.md](docs/setup-guide.md).
 
 ## 1. Register an application
 
-1. Azure portal > Microsoft Entra ID > App registrations > New registration. Any name, no redirect URI, Register.
+First, open Azure portal > Microsoft Entra ID > App registrations > **All applications** and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant: use its Application (client) ID, Directory (tenant) ID and its service principal's Object ID (step 4). Use its securely stored, unexpired client secret; if no usable secret is stored, create a new client secret on the **same app registration** (step 3). Do not delete or replace a secret used by another integration.
+
+1. Only if no suitable registration exists, select **New registration**. Any name, no redirect URI, Register. Otherwise open the existing registration and continue with step 2.
 2. On the Overview page copy the Application (client) ID and the Directory (tenant) ID.
-3. Certificates & secrets > New client secret. Copy the Value right away, it is shown once. Note the expiry date: when it expires, alarms stop until you enter a new secret in SOCRadar.
+3. If you already have a usable stored secret, use it. Otherwise, on the selected app: Certificates & secrets > New client secret. Copy the Value right away, it is shown once. Note the expiry date: when it expires, alarms stop until you enter a new secret in SOCRadar.
 4. Get the Object ID of the app's service principal. This is the value for `ServicePrincipalObjectId` in step 2. It is not the Application (client) ID and not the Object ID shown on the App registrations page.
    1. Still on the app's Overview page under App registrations, find **Managed application in local directory** and click the app name next to it.
    2. The Enterprise application page opens. On its Overview (or Properties) page copy **Object ID**.

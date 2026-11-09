@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / ".github/workflows/checks.yml").read_text(encoding="utf-8")
+SETUP = (ROOT / "docs/setup-guide.md").read_text(encoding="utf-8")
 STABLE_SHA = "d887b39123f95171f54adb2b9965b69c6b4c9314"
 
 
@@ -30,6 +31,21 @@ require("dedicated to this Push installation", "reused app-registration warning"
 require("very long alarm URL is omitted with an explicit marker", "long-URL omission behavior")
 require("mixed UTF-8 tail", "mixed-tail content limitation")
 require("tenant-specific validation", "unmeasured visual-rendering limitation")
+
+for name, document, heading in (
+    ("README", README, "## 1. Register an application"),
+    ("setup guide", SETUP, "## 1.0 App registrations"),
+):
+    section = document.split(heading, 1)[1].split("\n## ", 1)[0]
+    for text in ("**All applications**", "filter by name", "SOCRadar Push/DCR",
+                 "Reuse a suitable registration in your tenant", "Application (client) ID",
+                 "Directory (tenant) ID", "service principal's Object ID",
+                 "stored", "unexpired", "**same app registration**",
+                 "Only if no suitable registration exists", "**New registration**"):
+        if text not in section:
+            raise AssertionError("%s missing reuse-first instruction: %s" % (name, text))
+    if section.index("**All applications**") > section.index("**New registration**"):
+        raise AssertionError("%s offers new registration before reuse search" % name)
 
 if "Field | Value table" in README or "AlertBacked" in README:
     raise AssertionError("README retains superseded description or internal-table wording")

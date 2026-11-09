@@ -6,7 +6,7 @@ Identifiers in the screenshots are blurred.
 ## 0. What you need
 
 You enter 5 values in SOCRadar and 1 value in the Azure deployment form.
-Order: create an app in Microsoft Entra ID (1-3), deploy (4), copy the deployment outputs (5), fill the SOCRadar form (6).
+Order: reuse a suitable app in Microsoft Entra ID, or create one only if needed (1-3), deploy (4), copy the deployment outputs (5), fill the SOCRadar form (6).
 The deployment needs the app's Object ID, and SOCRadar needs the deployment outputs.
 
 | Value | Goes to | Where you find it | Section |
@@ -18,13 +18,15 @@ The deployment needs the app's Object ID, and SOCRadar needs the deployment outp
 | Data Collection Endpoint URI | SOCRadar | Deployment outputs | 5.0, 5.1 |
 | Data Collection Rule immutable ID | SOCRadar | Deployment outputs (same screen) | 5.1 |
 
-You need rights to create an app registration, and Owner or User Access Administrator on the resource group.
+You need access to the selected app registration and its stored secret, or permission to add a client secret to it. Rights to create an app registration are needed only if no suitable registration exists. You also need Owner or User Access Administrator on the resource group.
 No API permissions and no admin consent.
 
 ## 1.0 App registrations
 
+First, open Microsoft Entra ID > App registrations > **All applications** and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant. Copy its Application (client) ID and Directory (tenant) ID in 1.2, and its service principal's Object ID in 3.1. If you have a securely stored, unexpired client secret, use it and skip 2.0-2.1. If no usable secret is stored, create a new client secret on the **same app registration** in 2.0-2.1. Do not delete or replace a secret used by another integration.
+
 1. Search **App registrations** in the top search box and open it.
-2. **New registration**.
+2. Only if no suitable registration exists, select **New registration** and follow 1.1. Otherwise open the existing registration and continue at 1.2.
 
 ![App registrations](images/1-0-app-registrations.jpg)
 
