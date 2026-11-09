@@ -86,8 +86,10 @@ if "candidate" in README.lower() or "21861" in README:
     raise AssertionError("README retains internal candidate wording")
 for output in ("dceUri", "dcrImmutableId", "tenantId"):
     require("`%s`" % output, "exact deployment output name " + output)
-if 'branches: [master, main, "e2e-*"]' not in WORKFLOW:
+if 'branches: [master, main, "e2e-*", "armttk0-0116"]' not in WORKFLOW:
     raise AssertionError("checks workflow does not include the permanent e2e branch policy")
+if 'ARM-TTK must have zero failures' not in WORKFLOW or 'tests/check_arm_ttk.ps1' not in WORKFLOW:
+    raise AssertionError("checks workflow does not enforce ARM-TTK")
 if "python3 tests/mutate_description.py" not in WORKFLOW:
     raise AssertionError("checks workflow does not run description mutations")
 if "python3 tests/mutate_limits.py" not in WORKFLOW:

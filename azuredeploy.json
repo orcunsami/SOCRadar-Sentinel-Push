@@ -39,6 +39,13 @@
   "variables": {
     "location": "[parameters('WorkspaceLocation')]",
     "tableName": "SOCRadar_Push_Alarms_CL",
+    "alarmCustomDetails": {
+      "AlarmId": "AlarmId",
+      "AlarmMainType": "AlarmMainType",
+      "AlarmSubType": "AlarmSubType",
+      "SocradarSeverity": "Severity",
+      "AlarmStatus": "Status"
+    },
     "automationRuleId": "[guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName')), 'socradar-ccf-alarm-automation-rule')]",
     "mainTypes": [
       "Executive Protection",
@@ -77,7 +84,7 @@
       "Botnet": { "tactics": ["CredentialAccess"], "techniques": ["T1555", "T1056"] },
       "Phishing Domain": { "tactics": ["ResourceDevelopment", "InitialAccess"], "techniques": ["T1583", "T1566"] },
       "Domain": { "tactics": ["ResourceDevelopment", "InitialAccess"], "techniques": ["T1583", "T1566"] },
-      "Other": { "tactics": [], "techniques": [] }
+      "Other": { "tactics": "[json('[]')]", "techniques": "[json('[]')]" }
     },
     "ruleTypes": "[concat(variables('mainTypes'), createArray('Other'))]",
     "knownTypesKql": "[replace(replace(string(variables('mainTypes')), '[', '('), ']', ')')]",
@@ -182,7 +189,7 @@
       "comments": "Resolves the existing workspace, and its Microsoft Sentinel onboarding, before any resource is created. A condition:false resource counts as a satisfied dependency in ARM, so depending on the workspace resource itself does not stop the deployment when WorkspaceName does not exist and DeployNewWorkspace is false -- it would create the data collection endpoint and rule and only then fail. This template onboards Microsoft Sentinel only when it creates the workspace, so an existing workspace without it would fail at the analytics rules after the endpoint and rule were already created; onboardingStates/default returns NotFound in exactly that case, which is the polarity reference() can assert.",
       "condition": "[not(parameters('DeployNewWorkspace'))]",
       "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2021-04-01",
+      "apiVersion": "2025-04-01",
       "name": "precheck-workspace-exists",
       "properties": {
         "mode": "Incremental",
@@ -206,11 +213,11 @@
           "outputs": {
             "workspaceId": {
               "type": "string",
-              "value": "[reference(parameters('WorkspaceResourceId'), '2023-09-01', 'Full').properties.customerId]"
+              "value": "[reference(parameters('WorkspaceResourceId'), '2025-07-01', 'Full').properties.customerId]"
             },
             "sentinelOnboarded": {
               "type": "string",
-              "value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2023-02-01', 'Full').id]"
+              "value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2025-09-01', 'Full').id]"
             }
           }
         }
@@ -219,7 +226,7 @@
     {
       "condition": "[parameters('DeployNewWorkspace')]",
       "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2023-09-01",
+      "apiVersion": "2025-07-01",
       "name": "[parameters('WorkspaceName')]",
       "location": "[variables('location')]",
       "properties": {}
@@ -247,7 +254,7 @@
     {
       "condition": "[parameters('DeployNewWorkspace')]",
       "type": "Microsoft.OperationalInsights/workspaces/providers/onboardingStates",
-      "apiVersion": "2024-03-01",
+      "apiVersion": "2025-09-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/default')]",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
@@ -257,7 +264,7 @@
     },
     {
       "type": "Microsoft.OperationalInsights/workspaces/tables",
-      "apiVersion": "2022-10-01",
+      "apiVersion": "2025-07-01",
       "name": "[concat(parameters('WorkspaceName'), '/', variables('tableName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
@@ -346,7 +353,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
-      "apiVersion": "2023-03-11",
+      "apiVersion": "2024-03-11",
       "name": "[variables('dceName')]",
       "location": "[variables('location')]",
       "properties": {
@@ -360,7 +367,7 @@
     },
     {
       "type": "Microsoft.Insights/dataCollectionRules",
-      "apiVersion": "2023-03-11",
+      "apiVersion": "2025-05-11",
       "name": "[variables('dcrName')]",
       "location": "[variables('location')]",
       "dependsOn": [
@@ -484,7 +491,7 @@
     },
     {
       "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-      "apiVersion": "2024-03-01",
+      "apiVersion": "2025-09-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/', guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName')), 'socradar-ccf-alarm-rule', variables('ruleTypes')[copyIndex()]))]",
       "kind": "Scheduled",
       "copy": {
@@ -514,13 +521,7 @@
           "alertDescriptionFormat": "{{AlarmDescription}}",
           "alertSeverityColumnName": "SentinelSeverity"
         },
-        "customDetails": {
-          "AlarmId": "AlarmId",
-          "AlarmMainType": "AlarmMainType",
-          "AlarmSubType": "AlarmSubType",
-          "SocradarSeverity": "Severity",
-          "AlarmStatus": "Status"
-        },
+        "customDetails": "[variables('alarmCustomDetails')]",
         "entityMappings": [
           {
             "entityType": "URL",
@@ -542,8 +543,8 @@
             "groupByEntities": [
               "URL"
             ],
-            "groupByAlertDetails": [],
-            "groupByCustomDetails": []
+            "groupByAlertDetails": "[json('[]')]",
+            "groupByCustomDetails": "[json('[]')]"
           }
         }
       },
@@ -554,7 +555,7 @@
     },
     {
       "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-      "apiVersion": "2024-10-01-preview",
+      "apiVersion": "2025-09-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/', guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName')), variables('ruleTypes')[copyIndex()], 'nrt'))]",
       "kind": "NRT",
       "copy": {
@@ -580,13 +581,7 @@
           "alertDescriptionFormat": "{{AlarmDescription}}",
           "alertSeverityColumnName": "SentinelSeverity"
         },
-        "customDetails": {
-          "AlarmId": "AlarmId",
-          "AlarmMainType": "AlarmMainType",
-          "AlarmSubType": "AlarmSubType",
-          "SocradarSeverity": "Severity",
-          "AlarmStatus": "Status"
-        },
+        "customDetails": "[variables('alarmCustomDetails')]",
         "entityMappings": [
           {
             "entityType": "URL",
@@ -608,8 +603,8 @@
             "groupByEntities": [
               "URL"
             ],
-            "groupByAlertDetails": [],
-            "groupByCustomDetails": []
+            "groupByAlertDetails": "[json('[]')]",
+            "groupByCustomDetails": "[json('[]')]"
           }
         }
       },
@@ -620,7 +615,7 @@
     },
     {
       "type": "Microsoft.OperationalInsights/workspaces/providers/automationRules",
-      "apiVersion": "2024-03-01",
+      "apiVersion": "2025-09-01",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/', variables('automationRuleId'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'precheck-workspace-exists')]",
@@ -663,7 +658,7 @@
     },
     {
       "type": "Microsoft.Insights/workbooks",
-      "apiVersion": "2021-08-01",
+      "apiVersion": "2023-06-01",
       "name": "[variables('workbookId')]",
       "location": "[variables('location')]",
       "kind": "shared",
@@ -683,15 +678,15 @@
   "outputs": {
     "LogIngestionUrl": {
       "type": "string",
-      "value": "[concat(reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName')), '2023-03-11').logsIngestion.endpoint, '/dataCollectionRules/', reference(resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName')), '2023-03-11').immutableId, '/streams/Custom-SOCRadarAlarmsPush?api-version=2023-01-01')]"
+      "value": "[uri(reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName')), '2024-03-11').logsIngestion.endpoint, format('/dataCollectionRules/{0}/streams/Custom-SOCRadarAlarmsPush?api-version=2023-01-01', reference(resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName')), '2025-05-11').immutableId))]"
     },
     "DceUri": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName')), '2023-03-11').logsIngestion.endpoint]"
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName')), '2024-03-11').logsIngestion.endpoint]"
     },
     "DcrImmutableId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName')), '2023-03-11').immutableId]"
+      "value": "[reference(resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrName')), '2025-05-11').immutableId]"
     },
     "StreamName": {
       "type": "string",

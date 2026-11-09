@@ -36,7 +36,7 @@ MUTATIONS = [
      '''"expressionEvaluationOptions": {
           "scope": "outer"''', P),
     ("precheck no longer looks at the workspace", T,
-     '''"value": "[reference(parameters('WorkspaceResourceId'), '2023-09-01', 'Full').properties.customerId]"''',
+     '''"value": "[reference(parameters('WorkspaceResourceId'), '2025-07-01', 'Full').properties.customerId]"''',
      '''"value": "none"''', P),
     ("precheck runs when the workspace is being created", T,
      '''"condition": "[not(parameters('DeployNewWorkspace'))]",
@@ -57,7 +57,7 @@ MUTATIONS = [
       },
       "dependsOn": []''', P),
     ("precheck stops asserting Microsoft Sentinel", T,
-     '''"value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2023-02-01', 'Full').id]"''',
+     '''"value": "[reference(extensionResourceId(parameters('WorkspaceResourceId'), 'Microsoft.SecurityInsights/onboardingStates', 'default'), '2025-09-01', 'Full').id]"''',
      '''"value": "none"''', P),
     ("precheck runs only when the workspace is being created", T,
      '''"condition": "[not(parameters('DeployNewWorkspace'))]",
@@ -65,7 +65,7 @@ MUTATIONS = [
      '''"condition": "[parameters('DeployNewWorkspace')]",
       "type": "Microsoft.Resources/deployments"''', P),
     ("precheck reference drops its api-version and Full", T,
-     ''''2023-02-01', 'Full').id]"''',
+     ''''2025-09-01', 'Full').id]"''',
      ''''1999-01-01').id]"''', P),
 ]
 EXPECTED = [

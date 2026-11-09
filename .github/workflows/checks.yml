@@ -2,7 +2,7 @@ name: Checks
 
 on:
   push:
-    branches: [master, main, "e2e-*"]
+    branches: [master, main, "e2e-*", "armttk0-0116"]
   pull_request:
   workflow_dispatch:
 
@@ -66,3 +66,22 @@ jobs:
             exit 1
           fi
           echo "  no secret patterns"
+
+  arm-ttk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out ARM-TTK
+        uses: actions/checkout@v4
+        with:
+          repository: Azure/arm-ttk
+          ref: 0ec9a41a4503e970a0ec8efb0cd08415cc172175
+          path: .arm-ttk
+
+      - name: ARM-TTK must have zero failures
+        shell: pwsh
+        run: ./tests/check_arm_ttk.ps1 -ModulePath ./.arm-ttk/arm-ttk/arm-ttk.psd1 -TemplatePath ./azuredeploy.json -ResultFile "$env:RUNNER_TEMP/armttk.json"

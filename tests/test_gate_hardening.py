@@ -92,7 +92,13 @@ class GateHardeningTests(unittest.TestCase):
 
     def run_secret_gate(self, with_probe=False, scanner_error=False):
         workflow = (ROOT / ".github/workflows/checks.yml").read_text()
-        script = textwrap.dedent(workflow.split("- name: No secrets in tracked files\n        run: |\n", 1)[1])
+        body = workflow.split("- name: No secrets in tracked files\n        run: |\n", 1)[1]
+        lines = []
+        for line in body.splitlines():
+            if line.strip() and not line.startswith("          "):
+                break
+            lines.append(line)
+        script = textwrap.dedent("\n".join(lines))
         with tempfile.TemporaryDirectory(prefix="gate-scan-", dir="/tmp") as directory:
             root = Path(directory)
             # Generated noncredential; never copied from a capture or real key.

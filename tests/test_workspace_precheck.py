@@ -100,8 +100,8 @@ if any(r.get("name") == GUARD for r in resources):
     check(guard.get("condition") == "[not(parameters('DeployNewWorkspace'))]",
           "%s: condition must be exactly [not(parameters('DeployNewWorkspace'))], found %r"
           % (GUARD, guard.get("condition")), "condition")
-    check("'2023-09-01', 'Full'" in json.dumps(outs.get("workspaceId", {}))
-          and "'2023-02-01', 'Full'" in json.dumps(outs.get("sentinelOnboarded", {})),
+    check("'2025-07-01', 'Full'" in json.dumps(outs.get("workspaceId", {}))
+          and "'2025-09-01', 'Full'" in json.dumps(outs.get("sentinelOnboarded", {})),
           "%s: the references must carry a real api-version and 'Full', or ARM cannot resolve them" % GUARD, "reference-api")
     check("workspaceResourceId" in json.dumps(guard.get("properties", {})),
           "%s: does not resolve the workspace resource id" % GUARD)
