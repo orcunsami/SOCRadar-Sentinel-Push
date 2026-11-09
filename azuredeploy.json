@@ -555,7 +555,7 @@
     },
     {
       "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
-      "apiVersion": "2025-09-01",
+      "apiVersion": "2025-07-01-preview",
       "name": "[concat(parameters('WorkspaceName'), '/Microsoft.SecurityInsights/', guid(resourceId('Microsoft.OperationalInsights/workspaces', parameters('WorkspaceName')), variables('ruleTypes')[copyIndex()], 'nrt'))]",
       "kind": "NRT",
       "copy": {

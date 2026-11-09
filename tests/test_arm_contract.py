@@ -8,6 +8,16 @@ template = json.loads((Path(__file__).parents[1]/'azuredeploy.json').read_text()
 variables = template['variables']
 rules = [r for r in template['resources'] if r.get('kind') in ('Scheduled', 'NRT')]
 assert len(rules) == 2
+# Resource-kind sections, not cross-version examples in the Learn pages:
+# https://learn.microsoft.com/azure/templates/microsoft.securityinsights/2025-09-01/alertrules
+# https://learn.microsoft.com/azure/templates/microsoft.securityinsights/2025-07-01-preview/alertrules
+documented_kinds = {
+    '2025-09-01': {'Fusion', 'MicrosoftSecurityIncidentCreation', 'Scheduled'},
+    '2025-07-01-preview': {'Fusion', 'MLBehaviorAnalytics', 'MicrosoftSecurityIncidentCreation',
+                           'NRT', 'Scheduled', 'ThreatIntelligence'},
+}
+for rule in rules:
+    assert rule['kind'] in documented_kinds.get(rule['apiVersion'], set()), 'ARM_KIND_API: unsupported-kind-api'
 expected = {'AlarmId': 'AlarmId', 'AlarmMainType': 'AlarmMainType',
             'AlarmSubType': 'AlarmSubType', 'SocradarSeverity': 'Severity', 'AlarmStatus': 'Status'}
 assert variables['alarmCustomDetails'] == expected
