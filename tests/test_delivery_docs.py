@@ -31,6 +31,9 @@ require("dedicated to this Push installation", "reused app-registration warning"
 require("very long alarm URL is omitted with an explicit marker", "long-URL omission behavior")
 require("mixed UTF-8 tail", "mixed-tail content limitation")
 require("tenant-specific validation", "unmeasured visual-rendering limitation")
+require("A closed incident is not reopened; a new one opens.", "declared closed-incident resend limit")
+require("sees rows from 12 minutes to 1 day old", "declared queryPeriod limit")
+require("does not get one later", "declared expired backstop limit")
 
 for name, document, heading in (
     ("README", README, "## 1. Register an application"),

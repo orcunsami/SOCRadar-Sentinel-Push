@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from assertion_result import caught
 
 root=Path(__file__).resolve().parents[1]
 path=root/'azuredeploy.json'
@@ -35,9 +36,20 @@ mutations=[('lexer removed',lambda q:q.replace('extract_all(@"\\x22', 'extract_a
            ('long link cap removed',lambda q:q.replace('FullDescriptionLinkBytes > 768', 'FullDescriptionLinkBytes > 999999')),
            ('body budget clamp removed',lambda q:q.replace('max_of(0, 4800 - DescriptionLinkBytes)', '4800 - DescriptionLinkBytes')),
            ('byte guard removed',lambda q:q.replace('> 4900','> 99999'))]
+expected = ['lexer', 'grammar', 'decode', 'key-newline', 'native-type',
+            'json-lossless', 'json-lossless', 'packed-lossless', 'lexer-input',
+            'exponent', 'empty', 'separator', 'nested', 'fallback', 'serialize',
+            'delta', 'bytes', 'value-newline', 'reserve', 'cell-cap', 'content-cap',
+            'details-cap', 'no-details', 'detail-cr', 'link-cap', 'body-clamp', 'byte-guard']
+if len(expected) != len(mutations):
+    raise RuntimeError('Missing expected description assertion')
 blind=[]
+baseline=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],
+    capture_output=True,text=True,env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
+if baseline.returncode:
+    raise SystemExit('BASELINE_FAILED: tests/test_alert_description.py')
 try:
-    for name, mutate in mutations:
+    for (name, mutate), marker in zip(mutations, expected):
         template=json.loads(original)
         resource=next(r for r in template['resources'] if r.get('kind')=='NRT')
         before=resource['properties']['query']
@@ -47,8 +59,9 @@ try:
         path.write_text(json.dumps(template,ensure_ascii=False,indent=2)+'\n')
         result=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],capture_output=True,text=True,
             env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
-        print(('BLIND ' if result.returncode==0 else 'caught ')+name)
-        if result.returncode==0: blind.append(name)
+        matched = caught(result, 'DESCRIPTION:'+marker)
+        print(('caught ' if matched else 'BLIND/ERROR ')+name)
+        if not matched: blind.append(name)
 finally:
     path.write_text(original)
 print('blind:',len(blind),'of',len(mutations))

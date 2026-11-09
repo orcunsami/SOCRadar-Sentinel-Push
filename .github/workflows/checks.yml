@@ -44,15 +44,23 @@ jobs:
           # Calibrate first: a scan that cannot see a planted probe proves nothing.
           # The probe strings are assembled at run time so this file does not trip its own scan.
           printf 'api_key = "sk-%s"\nAKIA%s\n' "CALIBRATION0123456789012" "0000CALIBRATION1" > .calibration-probe
-          if ! grep -rIE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' . --exclude-dir=.git >/dev/null; then
+          calibration_rc=0
+          grep -rqIE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' . --exclude-dir=.git || calibration_rc=$?
+          if [ "$calibration_rc" -ne 0 ]; then
             echo "scan is blind - it cannot see the calibration probe"
             rm -f .calibration-probe
             exit 1
           fi
           rm -f .calibration-probe
           echo "  calibration ok"
-          if grep -rIE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|-----BEGIN [A-Z ]*PRIVATE KEY-----' . --exclude-dir=.git; then
+          scan_rc=0
+          grep -rqIE 'sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|-----BEGIN [A-Z ]*PRIVATE KEY-----' . --exclude-dir=.git || scan_rc=$?
+          if [ "$scan_rc" -eq 0 ]; then
             echo "secret pattern found in tracked content"
+            exit 1
+          fi
+          if [ "$scan_rc" -ne 1 ]; then
+            echo "secret scan failed"
             exit 1
           fi
           echo "  no secret patterns"

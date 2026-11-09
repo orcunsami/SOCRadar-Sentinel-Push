@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import sys
+from assertion_result import caught
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 T = "azuredeploy.json"
@@ -67,6 +68,14 @@ MUTATIONS = [
      ''''2023-02-01', 'Full').id]"''',
      ''''1999-01-01').id]"''', P),
 ]
+EXPECTED = [
+    "TABLE: table-name", "TABLE: harness-table", "PRECHECK:workspace-default",
+    "PRECHECK:inner-scope", "PRECHECK:workspace-reference",
+    "PRECHECK:condition", "PRECHECK:dependencies",
+    "PRECHECK:sentinel-reference", "PRECHECK:condition", "PRECHECK:reference-api",
+]
+if len(EXPECTED) != len(MUTATIONS):
+    raise RuntimeError("Missing expected mutation assertion")
 
 
 def syntax_error(path, text):
@@ -79,7 +88,12 @@ def syntax_error(path, text):
 
 
 blind = []
-for name, path, old, new, test in MUTATIONS:
+for test in sorted({mutation[4] for mutation in MUTATIONS}):
+    baseline = subprocess.run([sys.executable, test], cwd=REPO, capture_output=True, text=True,
+                              timeout=120, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+    if baseline.returncode:
+        raise SystemExit("BASELINE_FAILED: " + test)
+for (name, path, old, new, test), expected in zip(MUTATIONS, EXPECTED):
     full = os.path.join(REPO, path)
     orig = open(full, encoding="utf-8").read()
     if orig.count(old) != 1:
@@ -101,7 +115,9 @@ for name, path, old, new, test in MUTATIONS:
         print("ERROR %-48s timed out, not a catch" % name); blind.append(name)
     elif rc == 0:
         print("BLIND %-48s still passed" % name); blind.append(name)
-    else:
+    elif caught(r, expected):
         print("caught %-47s" % name)
+    else:
+        print("ERROR %-48s failed without its expected assertion" % name); blind.append(name)
 print("\nblind:", len(blind), "of", len(MUTATIONS))
 sys.exit(1 if blind else 0)

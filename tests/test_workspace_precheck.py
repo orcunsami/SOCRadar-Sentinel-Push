@@ -34,11 +34,11 @@ failures = []
 checks = 0
 
 
-def check(condition, message):
+def check(condition, message, code="unspecified"):
     global checks
     checks += 1
     if not condition:
-        failures.append(message)
+        failures.append((message, code))
 
 
 with open(TEMPLATE) as handle:
@@ -56,7 +56,7 @@ check(any(r.get("type") == WS_TYPE for r in resources),
 params = root.get("parameters", {})
 toggle = params.get("DeployNewWorkspace", {})
 check(toggle.get("defaultValue") is False,
-      "azuredeploy.json: DeployNewWorkspace must default to false")
+      "azuredeploy.json: DeployNewWorkspace must default to false", "workspace-default")
 check(list(params)[:2] == ["WorkspaceName", "DeployNewWorkspace"],
       "azuredeploy.json: DeployNewWorkspace must be declared directly after WorkspaceName, found %s" % list(params)[:2])
 
@@ -74,7 +74,7 @@ for name in names:
 
     check(props.get("expressionEvaluationOptions", {}).get("scope") == "inner",
           "%s: not inner scope, so its reference() resolves in the parent and never fails"
-          % name)
+          % name, "inner-scope")
     outputs = json.dumps(inner.get("outputs") or {})
     check("reference(" in outputs,
           "%s: does not reference anything, so it succeeds either way" % name)
@@ -90,19 +90,19 @@ if any(r.get("name") == GUARD for r in resources):
     # read both the workspace and its onboarding state; either one alone leaves a half install.
     outs = guard.get("properties", {}).get("template", {}).get("outputs", {})
     check("reference(parameters('WorkspaceResourceId')" in json.dumps(outs.get("workspaceId", {})),
-          "%s: workspaceId does not reference the workspace itself" % GUARD)
+          "%s: workspaceId does not reference the workspace itself" % GUARD, "workspace-reference")
     check("onboardingStates" in json.dumps(outs.get("sentinelOnboarded", {}))
           and "reference(" in json.dumps(outs.get("sentinelOnboarded", {})),
-          "%s: does not assert that Microsoft Sentinel is enabled on the workspace" % GUARD)
+          "%s: does not assert that Microsoft Sentinel is enabled on the workspace" % GUARD, "sentinel-reference")
     # Exact text, not "mentions the toggle": a condition without the `not` runs the guard on a
     # workspace being created (it fails a greenfield install) and skips it on an existing one
     # (the protection is gone). Both look like "gated on the toggle".
     check(guard.get("condition") == "[not(parameters('DeployNewWorkspace'))]",
           "%s: condition must be exactly [not(parameters('DeployNewWorkspace'))], found %r"
-          % (GUARD, guard.get("condition")))
+          % (GUARD, guard.get("condition")), "condition")
     check("'2023-09-01', 'Full'" in json.dumps(outs.get("workspaceId", {}))
           and "'2023-02-01', 'Full'" in json.dumps(outs.get("sentinelOnboarded", {})),
-          "%s: the references must carry a real api-version and 'Full', or ARM cannot resolve them" % GUARD)
+          "%s: the references must carry a real api-version and 'Full', or ARM cannot resolve them" % GUARD, "reference-api")
     check("workspaceResourceId" in json.dumps(guard.get("properties", {})),
           "%s: does not resolve the workspace resource id" % GUARD)
 
@@ -125,7 +125,7 @@ for name in names:
                  and dep not in (r.get("dependsOn") or [])]
     check(not unguarded,
           "azuredeploy.json: %d resource(s) do not wait for %s and would be created before "
-          "it fails: %s" % (len(unguarded), name, unguarded[:4]))
+          "it fails: %s" % (len(unguarded), name, unguarded[:4]), "dependencies")
 
 # A guard that depends on itself is rejected at validation with "cannot reference itself",
 # so the whole deployment never starts -- including the healthy case. The static shape looks
@@ -140,9 +140,9 @@ for resource in resources:
               "azuredeploy.json: %s depends on itself (%s) - ARM rejects the template at "
               "validation and nothing deploys at all" % (rname, dep))
 
-print("\n".join("  - %s" % f for f in failures))
+print("\n".join("  - %s" % message for message, code in failures))
 if failures:
     print("%d problem(s) in %d checks." % (len(failures), checks))
-    sys.exit(1)
+    raise AssertionError("PRECHECK:" + failures[0][1])
 print("workspace pre-check: guard present, can fail, and nothing runs before it "
       "(%d checks)" % checks)
