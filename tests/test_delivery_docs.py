@@ -105,10 +105,10 @@ for document in (README, SETUP):
     assert not re.search(r"[ğşıİöüç—]", document), "Customer docs must use English without em dash"
     for phrase in ("4000 UTF-16", "connection.test", "Monitoring Metrics Publisher"):
         assert phrase in document, "Missing customer safety instruction: " + phrase
-    for phrase in ("Measured in 3 test runs", "Measured in 2 completed test runs", "4 to 375 seconds", "143 to 187 seconds",
+    for phrase in ("Measured in 3 test runs", "Measured in 2 completed test runs", "4 seconds to 6 minutes", "2 to 3 minutes",
                    "not a guarantee", "30 minutes after sending", "incident missing",
                    "tag filters can hide a new incident", "`[SOCRadar]` title prefix",
-                   "8 to 100 seconds", "48 to 579 seconds", "66 to 962 seconds", "client credentials", "Microsoft XDR",
+                   "8 seconds to 2 minutes", "1 to 10 minutes", "1 to 16 minutes", "client credentials", "Microsoft XDR",
                    "workspace was not connected to the Defender portal",
                    "Timings can differ in tenants without Defender"):
         normalized = " ".join(document.split())

@@ -103,10 +103,10 @@ Follow the [setup guide's checks](docs/setup-guide.md#70-test-connection):
 2. Wait for the next real `alarm.created` / `OPEN` alarm. Match its entry in SOCRadar **Recent Deliveries**
    to its row in `SOCRadar_Push_Alarms_CL`, the alert and the related incident.
 
-Measured in 3 test runs: send to table row took about 4 to 375 seconds, and row to NRT alert
-took about 143 to 187 seconds; this is not a guarantee. Measured in 2 completed test runs:
-alert to reported incident creation took about 8 to 100 seconds, ARM visibility lagged creation
-by about 48 to 579 seconds, and the `SOCRadar` tag was recorded about 66 to 962 seconds after
+Measured in 3 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
+took about 2 to 3 minutes; this is not a guarantee. Measured in 2 completed test runs:
+alert to reported incident creation took about 8 seconds to 2 minutes, ARM visibility lagged creation
+by about 1 to 10 minutes, and the `SOCRadar` tag was recorded about 1 to 16 minutes after
 creation; this is not a guarantee. One completed run used the application's own identity (client credentials).
 Wait at least 30 minutes after sending before declaring an incident missing. Search by the
 `[SOCRadar]` title prefix while the tag is pending; tag filters can hide a new incident.
@@ -167,7 +167,7 @@ and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/w
 
 ## Things to know
 
-- In 2 completed test runs, the `SOCRadar` tag was recorded 66 to 962 seconds after incident creation,
+- In 2 completed test runs, the `SOCRadar` tag was recorded about 1 to 16 minutes after incident creation,
   not a guarantee. Search by the `[SOCRadar]` title prefix and
   wait at least 30 minutes after sending before declaring an incident missing; see the timings in section 5.
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
