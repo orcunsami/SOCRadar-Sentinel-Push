@@ -21,7 +21,7 @@ then verify Test Connection and the next real alarm.
 
 ## 1. Register an application
 
-First, open Azure portal > Microsoft Entra ID > App registrations > **All applications** and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant: use its Application (client) ID, Directory (tenant) ID and its service principal's Object ID (step 1.4). Use its securely stored, unexpired client secret; if no usable secret is stored, create a new client secret on the **same app registration** (step 1.3). Do not delete or replace a secret used by another integration.
+First, open Azure portal > Microsoft Entra ID > App registrations. Use **Owned applications** for an app you own, or **All applications** for an app owned by someone else, and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant: use its Application (client) ID, Directory (tenant) ID and its service principal's Object ID (step 1.4). Use its securely stored, unexpired client secret; if no usable secret is stored, create a new client secret on the **same app registration** (step 1.3). Do not delete or replace a secret used by another integration.
 
 1. Only if no suitable registration exists, select **New registration**. Any name, no redirect URI, Register. Otherwise open the existing registration and continue with step 2.
 2. On the Overview page copy the Application (client) ID and the Directory (tenant) ID.
@@ -57,7 +57,7 @@ Use an unused `WorkspaceName` and the intended `WorkspaceLocation`; the default 
 
 **Note:** with the default, the workspace in `WorkspaceName` must already exist in the resource group, unless you set `DeployNewWorkspace` to `true`.
 
-For a new installation, or one already using `SOCRadar_Push_Alarms_CL`, deploy an update into the same resource group with the same values.
+For a new installation, follow the Deploy steps above. To update an existing installation already using `SOCRadar_Push_Alarms_CL`, redeploy into the same resource group with the same values.
 
 ### Updating an existing Push installation
 
@@ -107,7 +107,10 @@ Measured in 3 test runs: send to table row took about 4 seconds to 6 minutes, an
 took about 2 to 3 minutes; this is not a guarantee. Measured in 2 completed test runs:
 alert to reported incident creation took about 8 seconds to 2 minutes, ARM visibility lagged creation
 by about 1 to 10 minutes, and the `SOCRadar` tag was recorded about 1 to 16 minutes after
-creation; this is not a guarantee. One completed run used the application's own identity (client credentials).
+creation; its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart.
+This is not a guarantee. One completed run used the application's own identity (client credentials).
+Measurements used test submissions to new workspaces in one region, North Europe.
+The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.
 Wait at least 30 minutes after sending before declaring an incident missing. Search by the
 `[SOCRadar]` title prefix while the tag is pending; tag filters can hide a new incident.
 
@@ -168,7 +171,8 @@ and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/w
 ## Things to know
 
 - In 2 completed test runs, the `SOCRadar` tag was recorded about 1 to 16 minutes after incident creation,
-  not a guarantee. Search by the `[SOCRadar]` title prefix and
+  and its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart;
+  this is not a guarantee. Search by the `[SOCRadar]` title prefix and
   wait at least 30 minutes after sending before declaring an incident missing; see the timings in section 5.
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
 - The template uses 18 of the 50 NRT rule slots per workspace; 32 remain only in an otherwise

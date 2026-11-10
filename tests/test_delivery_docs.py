@@ -114,6 +114,11 @@ for document in (README, SETUP):
         normalized = " ".join(document.split())
         assert phrase in normalized, "Missing measured timing boundary: " + phrase
     assert "typically takes a few minutes" not in document, "Unmeasured delivery promise retained"
+    normalized = " ".join(document.split())
+    for phrase in ("The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.",
+                   "its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart.",
+                   "Measurements used test submissions to new workspaces in one region, North Europe."):
+        assert phrase in normalized, "Missing observation condition: " + phrase
 require("otherwise empty workspace", "NRT capacity accounts for existing rules")
 require("Existing NRT rules reduce", "NRT capacity is not an unconditional remaining quota")
 require("HTTP 204 alone is not end-to-end ingestion proof", "HTTP acknowledgement boundary")

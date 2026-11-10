@@ -36,7 +36,7 @@ send permission is an Azure role on the DCR. Do not remove permissions a reused 
 
 ## 1.0 App registrations
 
-First, open Microsoft Entra ID > App registrations > **All applications** and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant. Copy its Application (client) ID and Directory (tenant) ID in 1.2, and its service principal's Object ID in 3.1. If you have a securely stored, unexpired client secret, use it and skip 2.0-2.1. If no usable secret is stored, create a new client secret on the **same app registration** in 2.0-2.1. Do not delete or replace a secret used by another integration.
+First, open Microsoft Entra ID > App registrations. Use **Owned applications** for an app you own, or **All applications** for an app owned by someone else, and filter by name for an existing SOCRadar Push/DCR app registration. Reuse a suitable registration in your tenant. Copy its Application (client) ID and Directory (tenant) ID in 1.2, and its service principal's Object ID in 3.1. If you have a securely stored, unexpired client secret, use it and skip 2.0-2.1. If no usable secret is stored, create a new client secret on the **same app registration** in 2.0-2.1. Do not delete or replace a secret used by another integration.
 
 1. Search **App registrations** in the top search box and open it.
 2. Only if no suitable registration exists, select **New registration** and follow 1.1. Otherwise open the existing registration and continue at 1.2.
@@ -116,6 +116,7 @@ Check Directory/tenant and Subscription again before creating resources.
 
 Expected: `SOCRadar_Push_Alarms_CL`, DCE, DCR, 18 NRT + 18 scheduled rules, the labeling automation
 rule and workbook in your workspace. A workspace is created only when `DeployNewWorkspace=true`.
+The screenshot's resource count can vary by template version.
 If deployment fails, open its failed operation and read the error. Check tenant, region, principal Object ID
 and role-assignment rights. Do not continue with partial resources or claim a successful setup.
 
@@ -314,8 +315,12 @@ require new App Registration permissions or application admin consent.
 
 Measured in 2 completed test runs: alert to reported incident creation took about 8 seconds to 2 minutes,
 ARM visibility lagged creation by about 1 to 10 minutes, and the `SOCRadar` tag was recorded
-about 1 to 16 minutes after creation; this is not a guarantee. One completed run used the
-application's own identity (client credentials). Wait at least 30 minutes after sending before
+about 1 to 16 minutes after creation; its first API read was about 3 to 20 minutes after creation,
+with reads 5 minutes apart. This is not a guarantee. One completed run used the
+application's own identity (client credentials).
+Measurements used test submissions to new workspaces in one region, North Europe.
+The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.
+Wait at least 30 minutes after sending before
 declaring an incident missing.
 
 The test tenant was connected to Defender and used incident provider Microsoft XDR. The test
