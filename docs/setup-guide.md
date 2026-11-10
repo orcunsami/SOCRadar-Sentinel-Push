@@ -323,7 +323,7 @@ creation. The earlier runs used 5-minute reads; the latest used 1-minute reads f
 (client credentials).
 Measurements used test submissions to new workspaces in one region, North Europe.
 The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.
-This did not recur in the subsequent runs; its cause was not determined.
+The incomplete outcome did not recur in the subsequent runs; its cause was not determined.
 Wait at least 30 minutes after sending before
 declaring an incident missing.
 

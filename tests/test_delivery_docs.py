@@ -121,7 +121,7 @@ for document in (README, SETUP):
                    "In two runs with tag-record timestamps,",
                    "already present at its first API read about 1 minute after creation.",
                    "Two completed runs used the application's own identity (client credentials).",
-                   "This did not recur in the subsequent runs; its cause was not determined.",
+                   "The incomplete outcome did not recur in the subsequent runs; its cause was not determined.",
                    "Measurements used test submissions to new workspaces in one region, North Europe."):
         assert phrase in normalized, "Missing observation condition: " + phrase
     for obsolete in ("Measured in 3 test runs:", "Measured in 2 completed test runs:",
