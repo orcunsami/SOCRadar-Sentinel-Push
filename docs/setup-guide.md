@@ -6,6 +6,8 @@ and check the next real alarm in Log Analytics and Microsoft Defender.
 The screenshots use red numbers 1 to 33. Identifiers are blurred. Follow the text for current
 defaults, output names and table names. The deployment image shows `true`, while the template
 defaults `DeployNewWorkspace` to `false`.
+Some screenshots also show older table or resource labels. Use `SOCRadar_Push_Alarms_CL` and
+`SOCRadar-Alarms-Push-DCR` from the current instructions rather than copying those older labels.
 
 ## 0. What you need
 
@@ -216,15 +218,15 @@ Test Connection or resend an alarm while its delivery result is unknown.
 3. Match its `AlarmId` and company to the row in your `SOCRadar_Push_Alarms_CL` table using section 9.0.
 4. Follow section 10.0 to find its alert and related incident in Defender.
 
-Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
-took about 2 to 3 minutes; this is not a guarantee. Incident creation, visibility and tagging can
+Measured in 3 test runs: send to table row took about 4 to 375 seconds, and row to NRT alert
+took about 143 to 187 seconds; this is not a guarantee. Incident creation, visibility and tagging can
 take longer, as described in section 10.2. Wait at least 30 minutes after sending before declaring
 an incident missing.
 If no new alarm arrives, wait for the next real alarm; Test Connection cannot validate incident creation.
 
 ## 9.0 Verify the row in Log Analytics
 
-Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes; this is not a guarantee.
+Measured in 3 test runs: send to table row took about 4 to 375 seconds; this is not a guarantee.
 
 Open your **workspace > Logs** and replace the placeholder with the actual alarm ID:
 
@@ -312,10 +314,11 @@ require new App Registration permissions or application admin consent.
    the link leads to the same source alarm. This integration supplies a URL entity; it does not add
    IP/DNS/Host entity enrichment, synchronization or daily rescans.
 
-In 1 completed run, alert to reported incident creation took about 2 minutes. The incident became
-visible in the ARM API about 5 to 10 minutes after creation. Its `SOCRadar` tag appeared about
-15 minutes after creation, within the first 20-minute check. These single-run observations are
-not a guarantee. Wait at least 30 minutes after sending before declaring an incident missing.
+Measured in 2 completed test runs: alert to reported incident creation took about 8 to 100 seconds,
+ARM visibility lagged creation by about 48 to 579 seconds, and the `SOCRadar` tag was recorded
+about 66 to 962 seconds after creation; this is not a guarantee. One completed run used the
+application's own identity (client credentials). Wait at least 30 minutes after sending before
+declaring an incident missing.
 
 The test tenant was connected to Defender and used incident provider Microsoft XDR. The test
 workspace was not connected to the Defender portal, so these measurements do not establish portal

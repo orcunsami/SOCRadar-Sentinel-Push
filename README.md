@@ -103,11 +103,11 @@ Follow the [setup guide's checks](docs/setup-guide.md#70-test-connection):
 2. Wait for the next real `alarm.created` / `OPEN` alarm. Match its entry in SOCRadar **Recent Deliveries**
    to its row in `SOCRadar_Push_Alarms_CL`, the alert and the related incident.
 
-Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
-took about 2 to 3 minutes; this is not a guarantee. In 1 completed run, alert to reported incident
-creation took about 2 minutes. The incident became visible in the ARM API about 5 to 10 minutes
-after creation, and its `SOCRadar` tag appeared about 15 minutes after creation, within the first
-20-minute check. These single-run observations are not a guarantee.
+Measured in 3 test runs: send to table row took about 4 to 375 seconds, and row to NRT alert
+took about 143 to 187 seconds; this is not a guarantee. Measured in 2 completed test runs:
+alert to reported incident creation took about 8 to 100 seconds, ARM visibility lagged creation
+by about 48 to 579 seconds, and the `SOCRadar` tag was recorded about 66 to 962 seconds after
+creation; this is not a guarantee. One completed run used the application's own identity (client credentials).
 Wait at least 30 minutes after sending before declaring an incident missing. Search by the
 `[SOCRadar]` title prefix while the tag is pending; tag filters can hide a new incident.
 
@@ -140,7 +140,8 @@ One pair of rules (NRT and scheduled backstop) per main type, matched by `AlarmM
 | Domain | ResourceDevelopment, InitialAccess | T1583, T1566 |
 | Other | none | none |
 
-The template installs 18 NRT rules; Microsoft allows 50 per workspace, so 32 remain.
+The template uses 18 of the 50 NRT rule slots per workspace. In an otherwise empty workspace,
+32 slots remain; existing NRT rules reduce that capacity.
 
 ## Where to see it in the Microsoft Defender portal
 
@@ -166,15 +167,18 @@ and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/w
 
 ## Things to know
 
-- The `SOCRadar` tag can arrive after the incident. Search by the `[SOCRadar]` title prefix and
+- In 2 completed test runs, the `SOCRadar` tag was recorded 66 to 962 seconds after incident creation,
+  not a guarantee. Search by the `[SOCRadar]` title prefix and
   wait at least 30 minutes after sending before declaring an incident missing; see the timings in section 5.
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
-- The template adds 18 NRT rules, which leaves 32 of the 50 NRT rules Microsoft allows ("No more than 50 rules can be defined per customer.").
+- The template uses 18 of the 50 NRT rule slots per workspace; 32 remain only in an otherwise
+  empty workspace. Existing NRT rules reduce the remaining capacity.
 - A resent alarm is added as a second alert to its open incident when the same rule raised both alerts within 7 days. A closed incident is not reopened; a new one opens.
 - URL grouping can also place alerts with different `AlarmId` values from the same rule and URL in one incident. A separate incident per alarm is not guaranteed.
 - `AlarmText` is truncated to 4000 UTF-16 code units, not 4000 Unicode code points. For example, 1100 emoji plus 1800 `a` characters use 2900 code points but 4000 UTF-16 units.
 - HTTP 204 alone is not end-to-end ingestion proof. Validate the JSON locally before sending, then verify the matching row and fields in Log Analytics.
-- The NRT rule sometimes raises two alerts for one alarm. Both land in the same incident.
+- The NRT rule sometimes raises two alerts for one alarm. They can share an open incident under
+  the grouping conditions above; a closed incident is not reopened.
 - Per alarm type the NRT rule takes about 30 alarms a minute. The backstop rule takes 149 every 10 minutes and sees rows from 12 minutes to 1 day old, so a big burst of one type still gets incidents, only later: about 900 an hour. An alarm that stays without an incident for a whole day (for example, the rules were switched off) does not get one later.
 - Rules skip rows with `EventType` `connection.test`, so SOCRadar's Test connection opens no incident.
 - `TimeGenerated` is the time the row reached Azure, so a late alarm is still seen by the rules. The alarm's own time is in `AlarmDate`.

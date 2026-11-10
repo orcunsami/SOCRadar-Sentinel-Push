@@ -105,15 +105,17 @@ for document in (README, SETUP):
     assert not re.search(r"[ğşıİöüç—]", document), "Customer docs must use English without em dash"
     for phrase in ("4000 UTF-16", "connection.test", "Monitoring Metrics Publisher"):
         assert phrase in document, "Missing customer safety instruction: " + phrase
-    for phrase in ("Measured in 2 test runs", "In 1 completed run", "4 seconds to 6 minutes", "2 to 3 minutes",
+    for phrase in ("Measured in 3 test runs", "Measured in 2 completed test runs", "4 to 375 seconds", "143 to 187 seconds",
                    "not a guarantee", "30 minutes after sending", "incident missing",
                    "tag filters can hide a new incident", "`[SOCRadar]` title prefix",
-                   "5 to 10 minutes", "15 minutes after creation", "Microsoft XDR",
+                   "8 to 100 seconds", "48 to 579 seconds", "66 to 962 seconds", "client credentials", "Microsoft XDR",
                    "workspace was not connected to the Defender portal",
                    "Timings can differ in tenants without Defender"):
         normalized = " ".join(document.split())
         assert phrase in normalized, "Missing measured timing boundary: " + phrase
     assert "typically takes a few minutes" not in document, "Unmeasured delivery promise retained"
+require("otherwise empty workspace", "NRT capacity accounts for existing rules")
+require("Existing NRT rules reduce", "NRT capacity is not an unconditional remaining quota")
 require("HTTP 204 alone is not end-to-end ingestion proof", "HTTP acknowledgement boundary")
 require("A separate incident per alarm is not guaranteed", "URL grouping boundary")
 deploy = re.search(r"\[!\[Deploy to Azure\].*?\]\((https://portal.azure.com/[^)]+)\)", README)
