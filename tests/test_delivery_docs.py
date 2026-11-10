@@ -116,6 +116,12 @@ assert set(steps) == {"1", "2", "3", "4"}, "Application registration steps missi
 assert "Application (client) ID" in steps["2"] and "Directory (tenant) ID" in steps["2"], "step 1.2 must provide identity values"
 assert "secret" in steps["3"] and "Value" in steps["3"], "step 1.3 must provide secret Value"
 assert "Object ID" in steps["4"] and "service principal" in steps["4"], "step 1.4 must provide service principal Object ID"
+assert "## 9.0 Verify the row in Log Analytics" in SETUP
+assert "## 10.0 Verify the alert and Defender incident" in SETUP
+assert "### 10.1 Connect your workspace to Defender" in SETUP
+assert "### 10.2 Inspect the alert and related incident" in SETUP
+assert "using section 9.0" in SETUP and "Follow section 10.0" in SETUP
+assert "docs/setup-guide.md#101-connect-your-workspace-to-defender" in README
 if 'branches: [master, main, "e2e-*", "armttk0-0116"]' not in WORKFLOW:
     raise AssertionError("checks workflow does not include the permanent e2e branch policy")
 if 'ARM-TTK must have zero failures' not in WORKFLOW or 'tests/check_arm_ttk.ps1' not in WORKFLOW:

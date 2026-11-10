@@ -140,7 +140,7 @@ Keep an existing primary unchanged and add your workspace as secondary. Do not d
 workspaces. For a tenant's first onboarding, follow Microsoft's primary-selection procedure with
 its administrator. Confirm the workspace appears connected in **Workspaces / SIEM workspaces**.
 Enabling Sentinel in the template does not establish this connection. RG Owner alone is insufficient;
-see the [guide's connection steps](docs/setup-guide.md#111-connect-your-workspace-to-defender),
+see the [guide's connection steps](docs/setup-guide.md#101-connect-your-workspace-to-defender),
 Microsoft's [onboarding procedure](https://learn.microsoft.com/en-us/unified-secops/microsoft-sentinel-onboard)
 and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/workspaces-defender-portal).
 

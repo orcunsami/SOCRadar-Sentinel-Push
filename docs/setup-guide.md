@@ -213,13 +213,13 @@ Test Connection or resend an alarm while its delivery result is unknown.
 2. In the saved SOCRadar integration, open **Recent Deliveries** and select that alarm. Inspect its
    request and response details. If the list appears stale, reload once. The integration overview's
    summary fields do not replace the actual delivery details.
-3. Match its `AlarmId` and company to the row in your `SOCRadar_Push_Alarms_CL` table using section 10.0.
-4. Follow section 11.0 to find its alert and related incident in Defender.
+3. Match its `AlarmId` and company to the row in your `SOCRadar_Push_Alarms_CL` table using section 9.0.
+4. Follow section 10.0 to find its alert and related incident in Defender.
 
 Delivery typically takes a few minutes, but this is not guaranteed and initial ingestion can take longer.
 If no new alarm arrives, wait for the next real alarm; Test Connection cannot validate incident creation.
 
-## 10.0 Verify the row in Log Analytics
+## 9.0 Verify the row in Log Analytics
 
 Open your **workspace > Logs** and replace the placeholder with the actual alarm ID:
 
@@ -265,9 +265,9 @@ use the delivery details to investigate. A failed query is not an empty result.
 Do not resend to speed up ingestion. More than one matching row can indicate a duplicate or replay.
 For custom API troubleshooting, validate JSON and its types before sending; requests must be under 1 MB.
 
-## 11.0 Verify the alert and Defender incident
+## 10.0 Verify the alert and Defender incident
 
-### 11.1 Connect your workspace to Defender
+### 10.1 Connect your workspace to Defender
 
 The template enables Microsoft Sentinel on the workspace. **Defender portal connection is a separate
 step**. Open **Setup & configuration > Settings > Microsoft Sentinel > SIEM workspaces**, or
@@ -293,7 +293,7 @@ Security Administrator and the applicable Azure roles. **RG Owner alone is insuf
 If selection or connection is unavailable, ask your tenant administrator for help. This does not
 require new App Registration permissions or application admin consent.
 
-### 11.2 Inspect the alert and related incident
+### 10.2 Inspect the alert and related incident
 
 1. Open Microsoft Defender > **Investigation & response > Incidents & alerts > Incidents**.
    Some tenants call the queue **Cases**. If it looks empty, select **Reset all** and check the time
