@@ -5,10 +5,9 @@ from pathlib import Path
 import subprocess
 import sys
 from assertion_result import caught
+from mutation_isolation import disposable_repo, write_mutant
 
-root=Path(__file__).resolve().parents[1]
-path=root/'azuredeploy.json'
-original=path.read_text()
+source_root=Path(__file__).resolve().parents[1]
 
 def drop_value_layer(query, depth):
     lines=[line for line in query.splitlines() if 'DecodedString =' in line]
@@ -68,26 +67,29 @@ expected = ['lexer', 'grammar', 'decode', 'key-newline', 'native-type',
             'value-layers', 'value-layers', 'value-layers']
 if len(expected) != len(mutations):
     raise RuntimeError('Missing expected description assertion')
-blind=[]
-baseline=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],
-    capture_output=True,text=True,env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
-if baseline.returncode:
-    raise SystemExit('BASELINE_FAILED: tests/test_alert_description.py')
-try:
-    for (name, mutate), marker in zip(mutations, expected):
-        template=json.loads(original)
-        resource=next(r for r in template['resources'] if r.get('kind')=='NRT')
-        before=resource['properties']['query']
-        resource['properties']['query']=mutate(before)
-        if resource['properties']['query']==before:
-            raise RuntimeError('No mutation: '+name)
-        path.write_text(json.dumps(template,ensure_ascii=False,indent=2)+'\n')
-        result=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],capture_output=True,text=True,
-            env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
-        matched = caught(result, 'DESCRIPTION:'+marker)
-        print(('caught ' if matched else 'BLIND/ERROR ')+name)
-        if not matched: blind.append(name)
-finally:
-    path.write_text(original)
-print('blind:',len(blind),'of',len(mutations))
-sys.exit(bool(blind))
+with disposable_repo(source_root) as root:
+    path=root/'azuredeploy.json'
+    original=path.read_text()
+    blind=[]
+    baseline=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],
+        capture_output=True,text=True,env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
+    if baseline.returncode:
+        raise SystemExit('BASELINE_FAILED: tests/test_alert_description.py')
+    try:
+        for (name, mutate), marker in zip(mutations, expected):
+            template=json.loads(original)
+            resource=next(r for r in template['resources'] if r.get('kind')=='NRT')
+            before=resource['properties']['query']
+            resource['properties']['query']=mutate(before)
+            if resource['properties']['query']==before:
+                raise RuntimeError('No mutation: '+name)
+            write_mutant(path, json.dumps(template,ensure_ascii=False,indent=2)+'\n')
+            result=subprocess.run([sys.executable,str(root/'tests/test_alert_description.py')],capture_output=True,text=True,
+                env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1'),timeout=60)
+            matched = caught(result, 'DESCRIPTION:'+marker)
+            print(('caught ' if matched else 'BLIND/ERROR ')+name)
+            if not matched: blind.append(name)
+    finally:
+        path.write_text(original)
+    print('blind:',len(blind),'of',len(mutations))
+    sys.exit(bool(blind))

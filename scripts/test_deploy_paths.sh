@@ -7,7 +7,7 @@
 #   C2 the same workspace after Microsoft Sentinel is enabled -> precheck succeeds and resolves customerId, deployment succeeds
 #   D  redeploy of B at the defaults -> succeeds and leaves the workspace exactly as it was
 #
-# Usage (deploys into live Azure; the subscription must be the active az one):
+# Usage (deploys into live Azure; every call is pinned to the explicit subscription):
 #   TEST_SUBSCRIPTION_ID=<id> bash scripts/test_deploy_paths.sh
 #   optional: TEST_LOCATION, KEEP_RESOURCES
 { set +x; } 2>/dev/null
@@ -18,16 +18,20 @@ TEMPLATE="$(cd "$SCRIPT_DIR/.." && pwd)/azuredeploy.json"
 LOCATION="${TEST_LOCATION:-westeurope}"
 KEEP="${KEEP_RESOURCES:-false}"
 
-SFX=$(python3 -c "import uuid;print(uuid.uuid4().hex[:4])") && [ -n "$SFX" ] || { echo "ERROR: CANNOT MEASURE: no suffix"; exit 1; }
+SFX=$(python3 -c "import uuid;print(uuid.uuid4().hex)") && [ -n "$SFX" ] || { echo "ERROR: CANNOT MEASURE: no suffix"; exit 1; }
 RG_APP="rg-push-paths-$SFX"
 RG_C="rg-push-paths-c-$SFX"
 WS="ws-push-paths-$SFX"
 MISSING="ws-does-not-exist-$SFX"
 
-if ! ACTIVE_SUB=$(az account show --query id -o tsv); then echo "ERROR: CANNOT MEASURE: az account show failed"; exit 1; fi
-if [ -z "${TEST_SUBSCRIPTION_ID:-}" ] || [ "$ACTIVE_SUB" != "$TEST_SUBSCRIPTION_ID" ]; then
-    echo "ERROR: set TEST_SUBSCRIPTION_ID to the subscription to deploy into; az is on '${ACTIVE_SUB:-none}'"
+if [ -z "${TEST_SUBSCRIPTION_ID:-}" ]; then
+    echo "ERROR: set TEST_SUBSCRIPTION_ID to the subscription to deploy into"
     exit 1
+fi
+# Pin even reads and cleanup; a concurrent az account set cannot redirect this run.
+az() { command az "$@" --subscription "$TEST_SUBSCRIPTION_ID"; }
+if ! ACTIVE_SUB=$(az account show --query id -o tsv) || [ "$ACTIVE_SUB" != "$TEST_SUBSCRIPTION_ID" ]; then
+    echo "ERROR: CANNOT MEASURE: requested subscription is unavailable"; exit 1
 fi
 
 fails=0
@@ -45,16 +49,40 @@ expect() {  # expect <name> <got> <want> <pass detail> <fail detail>
     else row "$1" FAIL "$5"; fi
 }
 
+ATTEMPTED=()
+owned_id() {
+    local rg="$1" got expected
+    expected="/subscriptions/$TEST_SUBSCRIPTION_ID/resourceGroups/$rg"
+    got=$(az group show -n "$rg" --query '[id,tags.ostTestRun]' -o tsv) || return 1
+    [ "$got" = "$(printf '%s\n%s' "$expected" "$SFX")" ] || return 1
+    printf '%s' "$expected"
+}
 cleanup() {
-    local rc=$?
-    if [ "$KEEP" = true ]; then echo "KEEP_RESOURCES=true, leaving $RG_APP and $RG_C in place"; return; fi
-    for rg in "$RG_APP" "$RG_C"; do
-        exists=$(az group exists -n "$rg" 2>/dev/null) || exists=unknown
-        [ "$exists" = false ] && continue
-        az group delete -n "$rg" --yes --no-wait -o none || echo "ERROR: delete of $rg was NOT queued, delete it by hand"
+    local rc=$? cleanup_failed=0 rg id exists attempt
+    trap - EXIT
+    for rg in "${ATTEMPTED[@]}"; do
+        exists=$(az group exists -n "$rg") || exists=unknown
+        [ "$exists" = false ] && { echo "cleanup OK: $rg absent"; continue; }
+        # Re-read ownership even after a failed/partially successful create. Never
+        # delete an unreadable target, foreign tag or unexpected resource ID.
+        if ! id=$(owned_id "$rg"); then
+            echo "cleanup FAIL: ownership unproved for $rg; preserved"; cleanup_failed=1; continue
+        fi
+        if [ "$KEEP" = true ]; then echo "cleanup KEEP: $id (owned by run $SFX)"; continue; fi
+        if ! az group delete -n "$rg" --yes --no-wait -o none; then
+            echo "cleanup FAIL: delete rejected for $id"; cleanup_failed=1; continue
+        fi
+        exists=unknown
+        for ((attempt=1; attempt<=12; attempt++)); do
+            exists=$(az group exists -n "$rg") || exists=unknown
+            [ "$exists" = false ] && break
+            [ "$attempt" -lt 12 ] && sleep 5
+        done
+        if [ "$exists" = false ]; then echo "cleanup OK: $id absent"
+        else echo "cleanup FAIL: absence not proved after 12 reads: $id ($exists)"; cleanup_failed=1; fi
     done
-    echo "cleanup: delete queued for $RG_APP and $RG_C"
-    return 0
+    [ "$rc" -ne 0 ] || rc=$cleanup_failed
+    exit "$rc"
 }
 trap cleanup EXIT
 
@@ -76,7 +104,17 @@ ws_show() { az monitor log-analytics workspace show -g "$RG_APP" -n "$WS" -o jso
     | python3 -c "import json,sys;d=json.load(sys.stdin);[d.pop(k,None) for k in ('etag','modifiedDate')];print(json.dumps(d,sort_keys=True))"; }
 
 echo "[1/5] Creating $RG_APP and $RG_C ..."
-for rg in "$RG_APP" "$RG_C"; do az group create -n "$rg" -l "$LOCATION" -o none || { echo "ERROR: CANNOT MEASURE: could not create $rg"; exit 1; }; done
+for rg in "$RG_APP" "$RG_C"; do
+    exists=$(az group exists -n "$rg") || exists=unknown
+    [ "$exists" = false ] || { echo "ERROR: target is not proved absent: $rg ($exists)"; exit 1; }
+done
+for rg in "$RG_APP" "$RG_C"; do
+    exists=$(az group exists -n "$rg") || exists=unknown
+    [ "$exists" = false ] || { echo "ERROR: target changed before create: $rg ($exists)"; exit 1; }
+    ATTEMPTED+=("$rg")
+    az group create -n "$rg" -l "$LOCATION" --tags "ostTestRun=$SFX" -o none || { echo "ERROR: CANNOT MEASURE: could not create $rg"; exit 1; }
+    owned_id "$rg" >/dev/null || { echo "ERROR: created RG ownership readback failed: $rg"; exit 1; }
+done
 
 echo "[2/5] Path A: missing workspace, parameters at their defaults ..."
 deploy "$RG_APP" path-a WorkspaceName="$MISSING"

@@ -12,8 +12,9 @@ import os
 import subprocess
 import sys
 from assertion_result import caught
+from mutation_isolation import disposable_repo, write_mutant
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SOURCE_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 T = "azuredeploy.json"
 P = "tests/test_workspace_precheck.py"
 MUTATIONS = [
@@ -87,37 +88,38 @@ def syntax_error(path, text):
     return None
 
 
-blind = []
-for test in sorted({mutation[4] for mutation in MUTATIONS}):
-    baseline = subprocess.run([sys.executable, test], cwd=REPO, capture_output=True, text=True,
-                              timeout=120, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
-    if baseline.returncode:
-        raise SystemExit("BASELINE_FAILED: " + test)
-for (name, path, old, new, test), expected in zip(MUTATIONS, EXPECTED):
-    full = os.path.join(REPO, path)
-    orig = open(full, encoding="utf-8").read()
-    if orig.count(old) != 1:
-        print("SKIP  %-48s anchor found %d time(s) in %s" % (name, orig.count(old), path)); blind.append(name); continue
-    mutant = orig.replace(old, new, 1)
-    err = syntax_error(path, mutant)
-    if err:
-        print("FAKE  %-48s mutant does not parse: %s" % (name, err)); blind.append(name); continue
-    try:
-        open(full, "w", encoding="utf-8").write(mutant)
-        r = subprocess.run([sys.executable, test], cwd=REPO, capture_output=True, text=True, timeout=120,
-                           env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
-        rc = r.returncode
-    except subprocess.TimeoutExpired:
-        rc = None
-    finally:
-        open(full, "w", encoding="utf-8").write(orig)
-    if rc is None:
-        print("ERROR %-48s timed out, not a catch" % name); blind.append(name)
-    elif rc == 0:
-        print("BLIND %-48s still passed" % name); blind.append(name)
-    elif caught(r, expected):
-        print("caught %-47s" % name)
-    else:
-        print("ERROR %-48s failed without its expected assertion" % name); blind.append(name)
-print("\nblind:", len(blind), "of", len(MUTATIONS))
-sys.exit(1 if blind else 0)
+with disposable_repo(SOURCE_REPO) as REPO:
+    blind = []
+    for test in sorted({mutation[4] for mutation in MUTATIONS}):
+        baseline = subprocess.run([sys.executable, test], cwd=REPO, capture_output=True, text=True,
+                                  timeout=120, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+        if baseline.returncode:
+            raise SystemExit("BASELINE_FAILED: " + test)
+    for (name, path, old, new, test), expected in zip(MUTATIONS, EXPECTED):
+        full = os.path.join(REPO, path)
+        orig = open(full, encoding="utf-8").read()
+        if orig.count(old) != 1:
+            print("SKIP  %-48s anchor found %d time(s) in %s" % (name, orig.count(old), path)); blind.append(name); continue
+        mutant = orig.replace(old, new, 1)
+        err = syntax_error(path, mutant)
+        if err:
+            print("FAKE  %-48s mutant does not parse: %s" % (name, err)); blind.append(name); continue
+        try:
+            write_mutant(full, mutant)
+            r = subprocess.run([sys.executable, test], cwd=REPO, capture_output=True, text=True, timeout=120,
+                               env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
+            rc = r.returncode
+        except subprocess.TimeoutExpired:
+            rc = None
+        finally:
+            open(full, "w", encoding="utf-8").write(orig)
+        if rc is None:
+            print("ERROR %-48s timed out, not a catch" % name); blind.append(name)
+        elif rc == 0:
+            print("BLIND %-48s still passed" % name); blind.append(name)
+        elif caught(r, expected):
+            print("caught %-47s" % name)
+        else:
+            print("ERROR %-48s failed without its expected assertion" % name); blind.append(name)
+    print("\nblind:", len(blind), "of", len(MUTATIONS))
+    sys.exit(1 if blind else 0)
