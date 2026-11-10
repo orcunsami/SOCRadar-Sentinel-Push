@@ -217,7 +217,7 @@ Test Connection or resend an alarm while its delivery result is unknown.
 3. Match its `AlarmId` and company to the row in your `SOCRadar_Push_Alarms_CL` table using section 9.0.
 4. Follow section 10.0 to find its alert and related incident in Defender.
 
-Measured in 3 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
+Measured in 4 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
 took about 2 to 3 minutes; this is not a guarantee. Incident creation, visibility and tagging can
 take longer, as described in section 10.2. Wait at least 30 minutes after sending before declaring
 an incident missing.
@@ -225,7 +225,7 @@ If no new alarm arrives, wait for the next real alarm; Test Connection cannot va
 
 ## 9.0 Verify the row in Log Analytics
 
-Measured in 3 test runs: send to table row took about 4 seconds to 6 minutes; this is not a guarantee.
+Measured in 4 test runs: send to table row took about 4 seconds to 6 minutes; this is not a guarantee.
 
 Open your **workspace > Logs** and replace the placeholder with the actual alarm ID:
 
@@ -313,13 +313,17 @@ require new App Registration permissions or application admin consent.
    the link leads to the same source alarm. This integration supplies a URL entity; it does not add
    IP/DNS/Host entity enrichment, synchronization or daily rescans.
 
-Measured in 2 completed test runs: alert to reported incident creation took about 8 seconds to 2 minutes,
-ARM visibility lagged creation by about 1 to 10 minutes, and the `SOCRadar` tag was recorded
-about 1 to 16 minutes after creation; its first API read was about 3 to 20 minutes after creation,
-with reads 5 minutes apart. This is not a guarantee. One completed run used the
-application's own identity (client credentials).
+Measured in 3 completed test runs, out of 4 test runs in total: alert to reported incident creation
+took about 8 seconds to 2 minutes, and the first ARM API read found the incident about 1 to 10 minutes
+after creation. In two runs with tag-record timestamps, the `SOCRadar` tag was recorded about 1 to 16
+minutes after creation; in the latest run, it was already present at its first API read about 1 minute
+after creation. Across the three completed runs, its first API read was about 1 to 20 minutes after
+creation. The earlier runs used 5-minute reads; the latest used 1-minute reads for 20 minutes, then
+5-minute reads. This is not a guarantee. Two completed runs used the application's own identity
+(client credentials).
 Measurements used test submissions to new workspaces in one region, North Europe.
 The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.
+This did not recur in the subsequent runs; its cause was not determined.
 Wait at least 30 minutes after sending before
 declaring an incident missing.
 

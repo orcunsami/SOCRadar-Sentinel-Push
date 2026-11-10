@@ -103,14 +103,18 @@ Follow the [setup guide's checks](docs/setup-guide.md#70-test-connection):
 2. Wait for the next real `alarm.created` / `OPEN` alarm. Match its entry in SOCRadar **Recent Deliveries**
    to its row in `SOCRadar_Push_Alarms_CL`, the alert and the related incident.
 
-Measured in 3 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
-took about 2 to 3 minutes; this is not a guarantee. Measured in 2 completed test runs:
-alert to reported incident creation took about 8 seconds to 2 minutes, ARM visibility lagged creation
-by about 1 to 10 minutes, and the `SOCRadar` tag was recorded about 1 to 16 minutes after
-creation; its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart.
-This is not a guarantee. One completed run used the application's own identity (client credentials).
+Measured in 4 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
+took about 2 to 3 minutes; this is not a guarantee. Measured in 3 completed test runs:
+alert to reported incident creation took about 8 seconds to 2 minutes, and the first ARM API read
+found the incident about 1 to 10 minutes after creation. In two runs with tag-record timestamps,
+the `SOCRadar` tag was recorded about 1 to 16 minutes after creation; in the latest run, it was
+already present at its first API read about 1 minute after creation. Across the three completed
+runs, its first API read was about 1 to 20 minutes after creation. The earlier runs used 5-minute
+reads; the latest used 1-minute reads for 20 minutes, then 5-minute reads. This is not a guarantee.
+Two completed runs used the application's own identity (client credentials).
 Measurements used test submissions to new workspaces in one region, North Europe.
 The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.
+This did not recur in the subsequent runs; its cause was not determined.
 Wait at least 30 minutes after sending before declaring an incident missing. Search by the
 `[SOCRadar]` title prefix while the tag is pending; tag filters can hide a new incident.
 
@@ -170,9 +174,11 @@ and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/w
 
 ## Things to know
 
-- In 2 completed test runs, the `SOCRadar` tag was recorded about 1 to 16 minutes after incident creation,
-  and its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart;
-  this is not a guarantee. Search by the `[SOCRadar]` title prefix and
+- In 3 completed test runs, the `SOCRadar` tag's first API read was about 1 to 20 minutes after incident
+  creation. In two runs with tag-record timestamps, it was recorded about 1 to 16 minutes after creation;
+  in the latest run, it was already present at its first read about 1 minute after creation.
+  The earlier runs used 5-minute reads; the latest used 1-minute reads for 20 minutes, then 5-minute reads.
+  This is not a guarantee. Search by the `[SOCRadar]` title prefix and
   wait at least 30 minutes after sending before declaring an incident missing; see the timings in section 5.
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
 - The template uses 18 of the 50 NRT rule slots per workspace; 32 remain only in an otherwise

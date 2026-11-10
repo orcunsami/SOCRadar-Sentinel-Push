@@ -105,10 +105,10 @@ for document in (README, SETUP):
     assert not re.search(r"[ğşıİöüç—]", document), "Customer docs must use English without em dash"
     for phrase in ("4000 UTF-16", "connection.test", "Monitoring Metrics Publisher"):
         assert phrase in document, "Missing customer safety instruction: " + phrase
-    for phrase in ("Measured in 3 test runs", "Measured in 2 completed test runs", "4 seconds to 6 minutes", "2 to 3 minutes",
+    for phrase in ("Measured in 4 test runs", "Measured in 3 completed test runs", "4 seconds to 6 minutes", "2 to 3 minutes",
                    "not a guarantee", "30 minutes after sending", "incident missing",
                    "tag filters can hide a new incident", "`[SOCRadar]` title prefix",
-                   "8 seconds to 2 minutes", "1 to 10 minutes", "1 to 16 minutes", "client credentials", "Microsoft XDR",
+                   "8 seconds to 2 minutes", "1 to 10 minutes", "1 to 16 minutes", "1 to 20 minutes", "client credentials", "Microsoft XDR",
                    "workspace was not connected to the Defender portal",
                    "Timings can differ in tenants without Defender"):
         normalized = " ".join(document.split())
@@ -116,9 +116,21 @@ for document in (README, SETUP):
     assert "typically takes a few minutes" not in document, "Unmeasured delivery promise retained"
     normalized = " ".join(document.split())
     for phrase in ("The remaining test run produced a row and alert, but observation stopped after 15 minutes without an incident; later arrival was not measured.",
-                   "its first API read was about 3 to 20 minutes after creation, with reads 5 minutes apart.",
+                   "its first API read was about 1 to 20 minutes after creation.",
+                   "The earlier runs used 5-minute reads; the latest used 1-minute reads for 20 minutes, then 5-minute reads.",
+                   "In two runs with tag-record timestamps,",
+                   "already present at its first API read about 1 minute after creation.",
+                   "Two completed runs used the application's own identity (client credentials).",
+                   "This did not recur in the subsequent runs; its cause was not determined.",
                    "Measurements used test submissions to new workspaces in one region, North Europe."):
         assert phrase in normalized, "Missing observation condition: " + phrase
+    for obsolete in ("Measured in 3 test runs:", "Measured in 2 completed test runs:",
+                     "One completed run used", "its first API read was about 3 to 20 minutes"):
+        assert obsolete not in normalized, "Superseded measurement population: " + obsolete
+incomplete_paragraphs = [paragraph for paragraph in re.split(r"\n\s*\n", SETUP)
+                         if "The remaining test run" in paragraph]
+assert len(incomplete_paragraphs) == 1, "Incomplete run must have one unambiguous context"
+assert "out of 4 test runs in total" in " ".join(incomplete_paragraphs[0].split()), "Incomplete-run population must be explicit in the same paragraph"
 require("otherwise empty workspace", "NRT capacity accounts for existing rules")
 require("Existing NRT rules reduce", "NRT capacity is not an unconditional remaining quota")
 require("HTTP 204 alone is not end-to-end ingestion proof", "HTTP acknowledgement boundary")
