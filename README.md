@@ -103,7 +103,17 @@ Follow the [setup guide's checks](docs/setup-guide.md#70-test-connection):
 2. Wait for the next real `alarm.created` / `OPEN` alarm. Match its entry in SOCRadar **Recent Deliveries**
    to its row in `SOCRadar_Push_Alarms_CL`, the alert and the related incident.
 
-Delivery typically takes a few minutes, but this is not guaranteed and initial ingestion can take longer.
+Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
+took about 2 to 3 minutes; this is not a guarantee. In 1 completed run, alert to reported incident
+creation took about 2 minutes. The incident became visible in the ARM API about 5 to 10 minutes
+after creation, and its `SOCRadar` tag appeared about 15 minutes after creation, within the first
+20-minute check. These single-run observations are not a guarantee.
+Wait at least 30 minutes after sending before declaring an incident missing. Search by the
+`[SOCRadar]` title prefix while the tag is pending; tag filters can hide a new incident.
+
+The test tenant was connected to Defender and used incident provider Microsoft XDR. The test
+workspace was not connected to the Defender portal, so these measurements do not establish portal
+visibility timing. Timings can differ in tenants without Defender.
 
 ## Analytics rules
 
@@ -156,6 +166,8 @@ and [role/scope requirements](https://learn.microsoft.com/en-us/azure/sentinel/w
 
 ## Things to know
 
+- The `SOCRadar` tag can arrive after the incident. Search by the `[SOCRadar]` title prefix and
+  wait at least 30 minutes after sending before declaring an incident missing; see the timings in section 5.
 - Each alarm type has two rules: `SOCRadar alarm (NRT): <type>` and `SOCRadar alarm: <type>`. To stop incidents for a type, switch off both.
 - The template adds 18 NRT rules, which leaves 32 of the 50 NRT rules Microsoft allows ("No more than 50 rules can be defined per customer.").
 - A resent alarm is added as a second alert to its open incident when the same rule raised both alerts within 7 days. A closed incident is not reopened; a new one opens.

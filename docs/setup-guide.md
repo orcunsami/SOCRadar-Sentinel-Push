@@ -216,10 +216,15 @@ Test Connection or resend an alarm while its delivery result is unknown.
 3. Match its `AlarmId` and company to the row in your `SOCRadar_Push_Alarms_CL` table using section 9.0.
 4. Follow section 10.0 to find its alert and related incident in Defender.
 
-Delivery typically takes a few minutes, but this is not guaranteed and initial ingestion can take longer.
+Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes, and row to NRT alert
+took about 2 to 3 minutes; this is not a guarantee. Incident creation, visibility and tagging can
+take longer, as described in section 10.2. Wait at least 30 minutes after sending before declaring
+an incident missing.
 If no new alarm arrives, wait for the next real alarm; Test Connection cannot validate incident creation.
 
 ## 9.0 Verify the row in Log Analytics
+
+Measured in 2 test runs: send to table row took about 4 seconds to 6 minutes; this is not a guarantee.
 
 Open your **workspace > Logs** and replace the placeholder with the actual alarm ID:
 
@@ -260,7 +265,7 @@ formatting, and object keys can appear in a different order without changing the
 | `ConnectorVersion` | Sender version identifier |
 
 If no row is visible, check the query time range and workspace first, then endpoint, stream, role
-and delivery response. Check at 5, 15 and 30 minutes after delivery; if the row remains absent,
+and delivery response. Check at 5, 15 and 30 minutes after sending; if the row remains absent,
 use the delivery details to investigate. A failed query is not an empty result.
 Do not resend to speed up ingestion. More than one matching row can indicate a duplicate or replay.
 For custom API troubleshooting, validate JSON and its types before sending; requests must be under 1 MB.
@@ -298,13 +303,23 @@ require new App Registration permissions or application admin consent.
 1. Open Microsoft Defender > **Investigation & response > Incidents & alerts > Incidents**.
    Some tenants call the queue **Cases**. If it looks empty, select **Reset all** and check the time
    range and workspace; a priority filter can hide incidents.
-2. Find the `SOCRadar` tag or `[SOCRadar] #<alarm id> - <title>`. Open the incident and related alert.
+2. Search by the `[SOCRadar]` title prefix, then match `#<alarm id> - <title>`. The `SOCRadar` tag
+   can arrive later, so tag filters can hide a new incident. Open the incident and related alert.
 3. Check the alert's rule name: **SOCRadar alarm (NRT): <type>** identifies the NRT rule.
    **SOCRadar alarm: <type>** identifies the scheduled backstop rule, which catches alarms missed
    by NRT. Match the alert to the incident and source alarm.
 4. Check the description, custom details and URL entity. Open **View in SOCRadar** to confirm that
    the link leads to the same source alarm. This integration supplies a URL entity; it does not add
    IP/DNS/Host entity enrichment, synchronization or daily rescans.
+
+In 1 completed run, alert to reported incident creation took about 2 minutes. The incident became
+visible in the ARM API about 5 to 10 minutes after creation. Its `SOCRadar` tag appeared about
+15 minutes after creation, within the first 20-minute check. These single-run observations are
+not a guarantee. Wait at least 30 minutes after sending before declaring an incident missing.
+
+The test tenant was connected to Defender and used incident provider Microsoft XDR. The test
+workspace was not connected to the Defender portal, so these measurements do not establish portal
+visibility timing. Timings can differ in tenants without Defender.
 
 The five custom-detail keys are `AlarmId`, `AlarmMainType`, `AlarmSubType`, `SocradarSeverity`
 and `AlarmStatus`. Raw `Severity` is upper-cased. Alert severity maps CRITICAL/HIGH to High,
