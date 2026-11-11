@@ -167,6 +167,26 @@ assert "### 10.1 Connect your workspace to Defender" in SETUP
 assert "### 10.2 Inspect the alert and related incident" in SETUP
 assert "using section 9.0" in SETUP and "Follow section 10.0" in SETUP
 assert "docs/setup-guide.md#101-connect-your-workspace-to-defender" in README
+outputs_section = SETUP.split("## 5.1 Outputs\n", 1)[1].split("\n## ", 1)[0]
+assert "If the outputs are visible, continue at 6.0; if they are missing or you want to verify the role, use 5.2." in outputs_section, "Outputs must explain the next step"
+resource_routes = SETUP.split("## 5.2 No outputs? Read them from the resources\n", 1)[1].split("\n## ", 1)[0]
+for phrase in ("deployment's Outputs page", "**Resource groups**", "**Resources** list",
+               "**SOCRadar-Push-DCE**", "**Overview**", "**Logs Ingestion**",
+               "**SOCRadar-Alarms-Push-DCR**", "**JSON View**", "`immutableId`",
+               "**Access control (IAM)**", "**Role assignments**", "**Monitoring Metrics Publisher**",
+               "**your application**", "**This resource**", "**optional**", "**403**"):
+    assert phrase in resource_routes, "Missing illustrated resource navigation: " + phrase
+assert "A 403 response alone does not prove a role-assignment problem." in resource_routes
+assert "Main setup steps 1 to 33 are unchanged." in resource_routes
+assert "**Optional verification steps 34 to 37**" in resource_routes
+for number, label in ((34, "**Access control (IAM)**"), (35, "**Role assignments**"),
+                      (36, "**Monitoring Metrics Publisher**"), (37, "**Scope**")):
+    step = re.search(r"(?m)^" + str(number) + r"\. (.+)$", resource_routes)
+    assert step and label in step.group(1), "Role-check badge and instruction must agree"
+assert "![Optional DCR send-role verification](images/5-2-role-assignment.jpg)" in resource_routes
+role_image = ROOT / "docs/images/5-2-role-assignment.jpg"
+assert role_image.is_file() and role_image.read_bytes().startswith(b"\xff\xd8\xff"), "Redacted role-check image must be a JPEG"
+assert len(list((ROOT / "docs/images").glob("*.jpg"))) == 16, "Setup guide must ship sixteen JPG images"
 if 'branches: [master, main, "e2e-*", "armttk0-0116"]' not in WORKFLOW:
     raise AssertionError("checks workflow does not include the permanent e2e branch policy")
 if 'ARM-TTK must have zero failures' not in WORKFLOW or 'tests/check_arm_ttk.ps1' not in WORKFLOW:

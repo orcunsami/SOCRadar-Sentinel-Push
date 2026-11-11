@@ -3,7 +3,8 @@
 Follow these steps to connect SOCRadar alarms to Microsoft Sentinel, verify a connection test,
 and check the next real alarm in Log Analytics and Microsoft Defender.
 
-The screenshots use red numbers 1 to 33. Identifiers are blurred. Follow the text for current
+The main setup screenshots use red numbers 1 to 33. Optional role verification uses 34 to 37.
+Identifiers are redacted. Follow the text for current
 defaults, output names and table names. The deployment image shows `true`, while the template
 defaults `DeployNewWorkspace` to `false`.
 
@@ -147,23 +148,65 @@ The existing screenshot uses lower-case initial letters. Copy your deployment's 
 
 ![Outputs](images/5-1-outputs.jpg)
 
+If the outputs are visible, continue at 6.0; if they are missing or you want to verify the role, use 5.2.
+
 ## 5.2 No outputs? Read them from the resources
 
-The same two values are on the resources in the resource group.
+The same two values are on the resources in the resource group. These routes start from the
+deployment's Outputs page in 5.1.
 
-24. **SOCRadar-Push-DCE** (Data collection endpoint) > Overview > **Logs Ingestion**.
-25. **SOCRadar-Alarms-Push-DCR** (Data collection rule) > Overview > **Immutable ID**.
+**Data collection endpoint (DCE)**
+
+- From the deployment's Outputs page, use the top search bar to open **Resource groups**.
+- Select the resource group used in 4.1, then **Overview** to show its **Resources** list.
+- In that list, open **SOCRadar-Push-DCE** (Data collection endpoint).
+- On the endpoint page, select **Overview**.
+
+24. Copy the **Logs Ingestion** address. This is the SOCRadar **Data Collection Endpoint URI**;
+    do not copy **Configuration Access**.
 
 ![Data collection endpoint](images/5-2-dce.jpg)
+
+**Data collection rule (DCR)**
+
+- From Outputs or the DCE page, use the top search bar to open **Resource groups**.
+- Select the same resource group, then **Overview** and its **Resources** list.
+- Open **SOCRadar-Alarms-Push-DCR** (Data collection rule), then **Overview**.
+- Select **JSON View** in the upper-right of the resource page and find `immutableId`.
+
+25. Copy `immutableId` (`dcr-...`) into SOCRadar **Data Collection Rule immutable ID**.
+    Do not copy the DCR's ARM resource `id`.
+
+The existing screenshot shows the **Immutable ID** shortcut on Overview; JSON View exposes the
+same value as `immutableId`.
+
 ![Data collection rule](images/5-2-dcr.jpg)
 
 ### Check the app's send role
 
-Open **SOCRadar-Alarms-Push-DCR > Access control (IAM) > Role assignments**. Find the selected
-Enterprise application and **Monitoring Metrics Publisher**. Its scope must be this DCR, not the DCE
-or the whole subscription. The template creates it when `ServicePrincipalObjectId` is supplied.
-If it is missing, stop and correct the selected principal/scope before testing. No admin-consent screen
-is part of this role check.
+This check is **optional**. If Outputs are visible, you can continue at 6.0 without it. Return here
+after step 32 if **Test Connection** returns **403**, or when you want to verify the send role.
+A 403 response alone does not prove a role-assignment problem.
+
+Main setup steps 1 to 33 are unchanged. **Optional verification steps 34 to 37** are a separate
+check and do not renumber the setup steps.
+
+- Return to the Azure portal from Outputs or SOCRadar. Use the top search bar to open **Resource groups**.
+- Select the same resource group, then **Overview** and its **Resources** list.
+- Open **SOCRadar-Alarms-Push-DCR**. If JSON View is open, close it to return to the resource page.
+
+34. Select **Access control (IAM)** in the DCR's left menu.
+35. Open the **Role assignments** tab. Set **Group by** to **Role** if needed.
+36. Expand **Monitoring Metrics Publisher** and find **your application** from section 1.
+    Its **Type** should be **Service principal**. The example application's name is redacted.
+37. On that same row, confirm **Scope** is **This resource**. An inherited Owner or Contributor
+    row does not confirm your application's send role.
+
+The scope must be this DCR, not the DCE or the whole subscription. The template creates the role
+when `ServicePrincipalObjectId` is supplied. If it is missing, stop and have the selected principal
+and DCR scope checked before testing again. No admin-consent screen is part of this role check.
+
+![Optional DCR send-role verification](images/5-2-role-assignment.jpg)
 
 ## 6.0 SOCRadar form
 
