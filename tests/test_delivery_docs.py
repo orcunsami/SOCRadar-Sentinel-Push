@@ -140,9 +140,21 @@ require("otherwise empty workspace", "NRT capacity accounts for existing rules")
 require("Existing NRT rules reduce", "NRT capacity is not an unconditional remaining quota")
 require("HTTP 204 alone is not end-to-end ingestion proof", "HTTP acknowledgement boundary")
 require("A separate incident per alarm is not guaranteed", "URL grouping boundary")
-deploy = re.search(r"\[!\[Deploy to Azure\].*?\]\((https://portal.azure.com/[^)]+)\)", README)
+deploy_pattern = r"\[!\[Deploy to Azure\].*?\]\((https://portal.azure.com/[^)]+)\)"
+deploy = re.search(deploy_pattern, README)
 assert deploy, "Customer Deploy button missing"
 assert unquote(deploy.group(1)).endswith("/orcunsami/SOCRadar-Sentinel-Push/master/azuredeploy.json"), "Customer Deploy button must use master"
+deploy_buttons = re.findall(deploy_pattern, README)
+assert len(deploy_buttons) == 2, "README must retain the top and section 2 Deploy buttons"
+assert deploy_buttons[0] == deploy_buttons[1], "Both Deploy buttons must have the same target"
+assert unquote(deploy_buttons[0]).split("/uri/", 1)[1] == "https://raw.githubusercontent.com/orcunsami/SOCRadar-Sentinel-Push/master/azuredeploy.json", "Deploy target must be the public master template"
+readme_lines = README.splitlines()
+guide_line = readme_lines.index("For illustrated instructions, follow the [setup guide](docs/setup-guide.md).")
+top_deploy = re.search(deploy_pattern, "\n".join(readme_lines[guide_line + 1:guide_line + 6]))
+assert top_deploy and top_deploy.group(1) == deploy_buttons[0], "Deploy button must appear within five lines after the setup guide"
+deploy_section = README.split("## 2. Deploy\n", 1)[1].split("\n## ", 1)[0]
+section_deploy = re.search(deploy_pattern, deploy_section)
+assert section_deploy and section_deploy.group(1) == deploy_buttons[0], "Section 2 must keep its Deploy button"
 registration = README.split("## 1. Register an application\n", 1)[1].split("\n## ", 1)[0]
 steps = dict(re.findall(r"(?m)^([1-4])\. (.+)$", registration))
 assert set(steps) == {"1", "2", "3", "4"}, "Application registration steps missing"

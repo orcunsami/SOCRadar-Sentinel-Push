@@ -9,6 +9,11 @@ rule that labels incidents `SOCRadar`, and the `SOCRadar Alarms` workbook. The P
 The scheduled rules only pick up what the NRT rules missed.
 
 For illustrated instructions, follow the [setup guide](docs/setup-guide.md).
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Forcunsami%2FSOCRadar-Sentinel-Push%2Fmaster%2Fazuredeploy.json)
+
+The deploy form needs the Service Principal Object ID; complete section 1 first.
+
 Reuse or register an app, deploy to your Microsoft Sentinel workspace, configure SOCRadar,
 then verify Test Connection and the next real alarm.
 
