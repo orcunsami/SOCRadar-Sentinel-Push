@@ -96,7 +96,8 @@ Or with Azure CLI: `az ad sp show --id <Application (client) ID> --query id -o t
 
 ## 4.0 Deploy to Azure
 
-16. Open the [Deploy to Azure button](../README.md#2-deploy). The Custom deployment form opens. The button is also near the top of the README.
+16. Open the [repository README](../README.md). Near the top, below the **setup guide** link,
+    select **Deploy to Azure**. The Custom deployment form opens. Section 2 has the same button.
 
 ![Deploy button](images/4-0-deploy-button.jpg)
 
